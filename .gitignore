@@ -1,0 +1,7 @@
+*.pyc
+tools/python/lib/*
+tools/python/include/*
+tools/python/local/*
+tools/python/src/*
+tools/python/bin/*
+smil-in-javascript-4lint.js
