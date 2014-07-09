@@ -104,7 +104,11 @@ function createTimingInput(animationRecord) {
   }
 
   if (animationRecord.repeatCount) {
-    timingInput.iterations = parseFloat(animationRecord.repeatCount);
+    if (animationRecord.repeatCount === 'indefinite') {
+      timingInput.iterations = Infinity;
+    } else {
+      timingInput.iterations = parseFloat(animationRecord.repeatCount);
+    }
   }
 
   // http://www.w3.org/TR/smil/smil-timing.html#adef-fill
@@ -150,15 +154,18 @@ function createEffectOptions(animationRecord) {
 }
 
 function createAnimation(animationRecord) {
-  animationRecord.timingInput = createTimingInput(animationRecord);
-  animationRecord.options = createEffectOptions(animationRecord);
+  if (animationRecord.target) {
+    var animation = new Animation(animationRecord.target,
+                                  animationRecord.effect,
+                                  animationRecord.timingInput);
+    animationRecord.animation = animation;
 
-  // FIXME: Implement animateMotion and mpath, i.e. motion path animation.
-  if (animationRecord.nodeName === 'animateMotion' ||
-      animationRecord.nodeName === 'mpath') {
-    // not yet implemented
-    return;
+    // FIXME: Respect begin and end attributes.
+    animationRecord.player = document.timeline.play(animation);
   }
+}
+
+function createKeyframeAnimation(animationRecord) {
 
   var attributeName = animationRecord.attributeName;
   if (animationRecord.nodeName === 'animateTransform') {
@@ -230,22 +237,37 @@ function createAnimation(animationRecord) {
         animationRecord.timingInput));
   }
 
-  var animation = null;
   if (keyframes) {
     animationRecord.keyframes = keyframes;
-    animationRecord.keyframeEffect =
+    animationRecord.effect =
         new KeyframeEffect(keyframes, animationRecord.options);
-    if (animationRecord.target) {
-      animation = new Animation(animationRecord.target,
-                                animationRecord.keyframeEffect,
-                                animationRecord.timingInput);
-      animationRecord.animation = animation;
+    createAnimation(animationRecord);
+  }
+}
+
+function createMotionPathAnimation(animationRecord) {
+  var resolvedPath;
+  if (animationRecord.mpathRecord) {
+    var pathRef = animationRecord.mpathRecord['xlink:href'];
+    if (pathRef && pathRef.indexOf('#') === 0) {
+      animationRecord.pathNode = document.getElementById(pathRef.substring(1));
+      if (animationRecord.pathNode) {
+        resolvedPath = animationRecord.pathNode.getAttribute('d');
+      }
     }
+  } else {
+    resolvedPath = animationRecord.path;
   }
 
-  // FIXME: Respect begin and end attributes.
-  if (animation) {
-    animationRecord.player = document.timeline.play(animation);
+  if (verbose) {
+    console.log('resolvedPath = ' + resolvedPath);
+  }
+
+  if (resolvedPath) {
+    animationRecord.resolvedPath = resolvedPath;
+    animationRecord.effect =
+        new MotionPathEffect(resolvedPath, animationRecord.options);
+    createAnimation(animationRecord);
   }
 }
 
@@ -264,17 +286,25 @@ function createAnimationRecord(element) {
     }
   }
 
-  var targetName = animationRecord['xlink:href'];
-  if (targetName && targetName.indexOf('#') === 0) {
+  var targetRef = animationRecord['xlink:href'];
+  if (targetRef && targetRef.indexOf('#') === 0) {
     animationRecord.target =
-        document.getElementById(targetName.substring(1));
+        document.getElementById(targetRef.substring(1));
   } else {
     animationRecord.target = element.parentNode;
   }
 
+  animationRecord.timingInput = createTimingInput(animationRecord);
+  animationRecord.options = createEffectOptions(animationRecord);
+
   animationRecords[element] = animationRecord;
 
-  createAnimation(animationRecord);
+  if (animationRecord.nodeName === 'mpath') {
+    animationRecords[element.parentNode].mpathRecord = animationRecord;
+  } else if (animationRecord.nodeName !== 'animateMotion') {
+    createKeyframeAnimation(animationRecord);
+  }
+  // else we have animateMotion, and wait in case we have an mpath child
 }
 
 function walkSVG(node) {
@@ -285,6 +315,10 @@ function walkSVG(node) {
   while (child) {
     walkSVG(child);
     child = child.nextSibling;
+  }
+
+  if (node.nodeName === 'animateMotion') {
+    createMotionPathAnimation(animationRecords[node]);
   }
 }
 
