@@ -162,6 +162,7 @@ function createAnimation(animationRecord) {
 
     // FIXME: Respect begin and end attributes.
     animationRecord.player = document.timeline.play(animation);
+    animationRecord.player.startTime = 0;
   }
 }
 
@@ -322,8 +323,7 @@ function walkSVG(node) {
   }
 }
 
-window.onload = function() {
-
+window.addEventListener('load', function() {
   // We would like to use document.querySelectorAll(tag) for each tag in
   // observedTags, but can't yet due to
   // querySelectorAll unable to find SVG camelCase elements in HTML
@@ -333,6 +333,6 @@ window.onload = function() {
   for (var index = 0; index < svgFragmentList.length; ++index) {
     walkSVG(svgFragmentList[index]);
   }
-};
+});
 
 })();
