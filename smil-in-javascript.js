@@ -203,22 +203,61 @@ function createKeyframeAnimation(animationRecord) {
       };
     }
 
+    var keyTimeList = undefined;
+    if (animationRecord.keyTimes) {
+      keyTimeList = animationRecord.keyTimes.split(';');
+
+      var previousKeyTime = 0;
+      var validKeyTime = true;
+      for (var keyTimeIndex = 0; validKeyTime && keyTimeIndex < keyTimeList.length; ++keyTimeIndex) {
+        var currentKeyTime = parseFloat(keyTimeList[keyTimeIndex]);
+        keyTimeList[keyTimeIndex] = currentKeyTime;
+        validKeyTime =
+            currentKeyTime >= previousKeyTime &&
+            (keyTimeIndex !== 0 || currentKeyTime === 0) &&
+            currentKeyTime <= 1;
+
+        previousKeyTime = currentKeyTime;
+      }
+      if (!validKeyTime) {
+        keyTimeList = undefined;
+      }
+    }
+
     if (animationRecord.values) {
       var valueList = animationRecord.values.split(';');
+
+      // http://www.w3.org/TR/SVG/animate.html#KeyTimesAttribute
+      // For animations specified with a ‘values’ list, the ‘keyTimes’ attribute if specified must have exactly as many values as there are in the ‘values’ attribute.
+      if (keyTimeList && keyTimeList.length !== valueList.length) {
+        keyTimeList = undefined;
+      }
+
       keyframes = [];
       for (var valueIndex = 0; valueIndex < valueList.length; ++valueIndex) {
         var keyframe = {};
         keyframe[attributeName] = processValue(valueList[valueIndex].trim());
+        if (keyTimeList) {
+          keyframe.offset = keyTimeList[valueIndex];
+        }
         keyframes.push(keyframe);
       }
-
-      // FIXME: check keyTimes - if present, must have the same number of
-      // entries as values.
     } else if (animationRecord.from && animationRecord.to) {
-      keyframes = [
-        {offset: 0},
-        {offset: 1}
-      ];
+
+      // http://www.w3.org/TR/SVG/animate.html#KeyTimesAttribute
+      // For from/to/by animations, the ‘keyTimes’ attribute if specified must have two values.
+      if (keyTimeList && keyTimeList.length === 2) {
+        keyframes = [
+          {offset: keyTimeList[0]},
+          {offset: keyTimeList[1]}
+        ];
+      } else {
+        keyframes = [
+          {offset: 0},
+          {offset: 1}
+        ];
+      }
+
       keyframes[0][attributeName] = processValue(animationRecord.from);
       keyframes[1][attributeName] = processValue(animationRecord.to);
     }
