@@ -162,7 +162,8 @@ function createAnimation(animationRecord) {
 
     // FIXME: Respect begin and end attributes.
     animationRecord.player = document.timeline.play(animation);
-    animationRecord.player.startTime = 0;
+    animationRecord.startTime = 0;
+    animationRecord.player.startTime = animationRecord.startTime;
   }
 }
 
@@ -323,7 +324,12 @@ function walkSVG(node) {
   }
 }
 
-window.addEventListener('load', function() {
+function updateRecords() {
+  if (Object.keys(animationRecords).length !== 0) {
+    // We have already walked the DOM.
+    return;
+  }
+
   // We would like to use document.querySelectorAll(tag) for each tag in
   // observedTags, but can't yet due to
   // querySelectorAll unable to find SVG camelCase elements in HTML
@@ -333,6 +339,53 @@ window.addEventListener('load', function() {
   for (var index = 0; index < svgFragmentList.length; ++index) {
     walkSVG(svgFragmentList[index]);
   }
+}
+
+window.addEventListener('load', updateRecords);
+
+function millisecondsToSeconds(milliseconds) {
+  return milliseconds / 1000;
+}
+
+Object.defineProperty(SVGPolyfillAnimationElement.prototype, 'targetElement', {
+  enumerable: true,
+  get: function() {
+    updateRecords();
+    var animationRecord = animationRecords[this];
+    if (animationRecord) {
+      return animationRecord.target;
+    } else {
+      throw new Error('targetElement get on unknown ' +
+          this.nodeName + ' ' + this.id);
+    }
+  }
 });
+
+SVGPolyfillAnimationElement.prototype.getStartTime = function() {
+    updateRecords();
+    var animationRecord = animationRecords[this];
+    if (animationRecord) {
+      return millisecondsToSeconds(animationRecord.startTime);
+    } else {
+      throw new Error('getStartTime() on unknown ' +
+          this.nodeName + ' ' + this.id);
+    }
+};
+
+SVGPolyfillAnimationElement.prototype.getCurrentTime = function() {
+    updateRecords();
+    return millisecondsToSeconds(document.timeline.currentTime);
+};
+
+SVGPolyfillAnimationElement.prototype.getSimpleDuration = function() {
+    updateRecords();
+    var animationRecord = animationRecords[this];
+    if (animationRecord) {
+      return millisecondsToSeconds(animationRecord.timingInput.duration);
+    } else {
+      throw new Error('getSimpleDuration() on unknown ' +
+          this.nodeName + ' ' + this.id);
+    }
+};
 
 })();
