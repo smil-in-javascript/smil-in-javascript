@@ -137,7 +137,9 @@ function createEffectOptions(animationRecord) {
   // priority animations.
   // http://www.w3.org/TR/smil/smil-animation.html#adef-additive
   if (animationRecord.additive && animationRecord.additive === 'sum') {
-    options.composite = 'accumulate';
+    // FIXME: use 'accumulate' when support is implemented in the
+    // Web Animations Polyfill.
+    options.composite = 'add';
   } else {
     // default behavior is options.composite = 'replace';
   }
@@ -151,9 +153,15 @@ function createEffectOptions(animationRecord) {
   }
 
   // http://www.w3.org/TR/SVG/animate.html#AnimateMotionElement
-  if (animationRecord.rotate &&
-      animationRecord.rotate === 'auto') {
-    options.autoRotate = 'auto-rotate';
+  if (animationRecord.rotate) {
+    if (animationRecord.rotate === 'auto') {
+      options.autoRotate = 'auto-rotate';
+    } else if (animationRecord.rotate === 'auto-reverse') {
+      options.autoRotate = 'auto-rotate';
+      options.angle = 180;
+    } else {
+      options.angle = parseFloat(animationRecord.rotate);
+    }
   } else {
     // default behavior is options.autoRotate = 'none';
   }
