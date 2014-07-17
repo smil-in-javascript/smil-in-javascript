@@ -90,8 +90,10 @@ function timing_test_impl(callback, desc) {
     if (verbose || !matched) {
       console.log(expectation.millis + 'ms ' + expectation.propertyName +
           ' expected=' + expectedValue +
-          ' polyfill=' + polyfillAnimatedValue +
-          ' native=' + nativeAnimatedValue + '.');
+          ' ' + expectation.polyfillAnimatedElement.id +
+          '=' + polyfillAnimatedValue +
+          ' ' + expectation.nativeAnimatedElement.id +
+          '=' + nativeAnimatedValue + '.');
     }
 
     if (matched) {
