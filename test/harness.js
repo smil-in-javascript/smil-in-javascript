@@ -38,17 +38,36 @@ function timing_test_impl(callback, desc) {
     document.timeline._pauseAnimationsForTesting(millis);
   }
 
+  function readAttribute(element, propertyName) {
+    switch (propertyName) {
+      case 'targetElement':
+        return element.targetElement;
+      case 'simpleDuration':
+        return element.getSimpleDuration();
+      case 'startTime':
+        return element.getStartTime();
+      case 'currentTime':
+        return element.getCurrentTime();
+      default:
+        // FIXME: getAttribute(expectation.propertyName) does not return
+        // animated value for polyfillAnimatedElement but does for
+        // nativeAnimatedElement.
+        return element.attributes[propertyName].value;
+    }
+  }
+
+  function roughlyEqual(first, second) {
+    return Math.abs(first - second) < 1E-6;
+  }
+
   function verifyExpectation() {
     var expectation = expectationList[expectationIndex];
     var expectedValue = expectation.expectedValue;
 
-    // FIXME: getAttribute(expectation.propertyName) does not return
-    // animated value for polyfillAnimatedElement but does for
-    // nativeAnimatedElement.
-    var polyfillAnimatedValue = expectation.polyfillAnimatedElement.
-        attributes[expectation.propertyName].value;
-    var nativeAnimatedValue = expectation.nativeAnimatedElement.
-        attributes[expectation.propertyName].value;
+    var polyfillAnimatedValue = readAttribute(
+        expectation.polyfillAnimatedElement, expectation.propertyName);
+    var nativeAnimatedValue = readAttribute(
+        expectation.nativeAnimatedElement, expectation.propertyName);
 
     var matched = false;
     if (Array.isArray(expectedValue)) {
@@ -57,8 +76,13 @@ function timing_test_impl(callback, desc) {
         matched = true;
       }
     } else {
-      if (polyfillAnimatedValue === expectedValue.toString() &&
-          nativeAnimatedValue === expectedValue.toString()) {
+      if (typeof expectedValue == 'number') {
+        if (roughlyEqual(parseFloat(polyfillAnimatedValue), expectedValue) &&
+            roughlyEqual(parseFloat(nativeAnimatedValue), expectedValue)) {
+          matched = true;
+        }
+      } else if (polyfillAnimatedValue === expectedValue &&
+                 nativeAnimatedValue === expectedValue) {
         matched = true;
       }
     }
