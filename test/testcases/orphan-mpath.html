@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <script src="../../web-animations.js"></script>
+    <script src="../../smil-in-javascript.js"></script>
+
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="500">
+  <rect width="40" height="40" fill="green" opacity="0.5">
+    <animateMotion calcMode="linear" dur="2s" repeatCount="indefinite"
+      path="M 100 100 L 300 50"/>
+  </rect>
+  <rect width="40" height="40" fill="red" opacity="0.5">
+    <nativeAnimateMotion calcMode="linear" dur="2s" repeatCount="indefinite"
+      path="M 100 100 L 300 50"/>
+  </rect>
+
+  <!-- This mpath element has no animateMotion parent. -->
+  <mpath xlink:href="#shortPath"/>
+  <path id="shortPath" d="M 1 2 L 3 4"/>
+</svg>
+
+  </body>
+</html>

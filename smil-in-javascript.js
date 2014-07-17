@@ -150,6 +150,14 @@ function createEffectOptions(animationRecord) {
     // default behavior is options.iterationComposite = 'replace';
   }
 
+  // http://www.w3.org/TR/SVG/animate.html#AnimateMotionElement
+  if (animationRecord.rotate &&
+      animationRecord.rotate === 'auto') {
+    options.autoRotate = 'auto-rotate';
+  } else {
+    // default behavior is options.autoRotate = 'none';
+  }
+
   return options;
 }
 
@@ -302,6 +310,9 @@ function createMotionPathAnimation(animationRecord) {
 
   if (verbose) {
     console.log('resolvedPath = ' + resolvedPath);
+    console.log('options  = ' + JSON.stringify(animationRecord.options));
+    console.log('timingInput  = ' + JSON.stringify(
+        animationRecord.timingInput));
   }
 
   if (resolvedPath) {
@@ -341,7 +352,10 @@ function createAnimationRecord(element) {
   animationRecords[element] = animationRecord;
 
   if (animationRecord.nodeName === 'mpath') {
-    animationRecords[element.parentNode].mpathRecord = animationRecord;
+    var parentRecord = animationRecords[element.parentNode];
+    if (parentRecord) {
+      parentRecord.mpathRecord = animationRecord;
+    }
   } else if (animationRecord.nodeName !== 'animateMotion') {
     createKeyframeAnimation(animationRecord);
   }
