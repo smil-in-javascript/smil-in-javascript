@@ -4,7 +4,7 @@ timing_test(function() {
   var polyfillRect = document.getElementById('polyfillRect');
   var nativeRect = document.getElementById('nativeRect');
 
-  // FIXME: enable width tests when Polyfill implements support for begin time(s).
+  // FIXME: enable width tests when Polyfill implements support for begin time
   // (width animation should begin after 2s, not immediately)
   at(0, 'x', 100, polyfillRect, nativeRect);
   at(500, 'height', 125, polyfillRect, nativeRect);

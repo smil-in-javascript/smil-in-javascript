@@ -71,8 +71,8 @@ function timing_test_impl(callback, desc) {
 
     var matched = false;
     if (Array.isArray(expectedValue)) {
-      if (expectedValue.indexOf(polyfillAnimatedValue) > -1 &&
-          expectedValue.indexOf(nativeAnimatedValue) > -1) {
+      if (expectedValue.indexOf(polyfillAnimatedValue) === 0 &&
+          expectedValue.indexOf(nativeAnimatedValue) === 1) {
         matched = true;
       }
     } else {
