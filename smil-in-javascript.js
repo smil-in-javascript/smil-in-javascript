@@ -218,7 +218,9 @@ function createKeyframeAnimation(animationRecord) {
 
       var previousKeyTime = 0;
       var validKeyTime = true;
-      for (var keyTimeIndex = 0; validKeyTime && keyTimeIndex < keyTimeList.length; ++keyTimeIndex) {
+      for (var keyTimeIndex = 0;
+           validKeyTime && keyTimeIndex < keyTimeList.length;
+           ++keyTimeIndex) {
         var currentKeyTime = parseFloat(keyTimeList[keyTimeIndex]);
         keyTimeList[keyTimeIndex] = currentKeyTime;
         validKeyTime =
@@ -237,7 +239,9 @@ function createKeyframeAnimation(animationRecord) {
       var valueList = animationRecord.values.split(';');
 
       // http://www.w3.org/TR/SVG/animate.html#KeyTimesAttribute
-      // For animations specified with a ‘values’ list, the ‘keyTimes’ attribute if specified must have exactly as many values as there are in the ‘values’ attribute.
+      // For animations specified with a ‘values’ list, the ‘keyTimes’
+      // attribute if specified must have exactly as many values as there
+      // are in the ‘values’ attribute.
       if (keyTimeList && keyTimeList.length !== valueList.length) {
         keyTimeList = undefined;
       }
@@ -254,7 +258,8 @@ function createKeyframeAnimation(animationRecord) {
     } else if (animationRecord.from && animationRecord.to) {
 
       // http://www.w3.org/TR/SVG/animate.html#KeyTimesAttribute
-      // For from/to/by animations, the ‘keyTimes’ attribute if specified must have two values.
+      // For from/to/by animations, the ‘keyTimes’ attribute if specified
+      // must have two values.
       if (keyTimeList && keyTimeList.length === 2) {
         keyframes = [
           {offset: keyTimeList[0]},
