@@ -5330,12 +5330,16 @@ var ensureTargetSVGInitialised = function(property, target) {
     Object.defineProperty(target.actuals, property, configureDescriptor({
       set: function(value) {
         if (value === null) {
-          target._actuals[property] = target._bases[property];
-          target._setAttribute(property, target._bases[property]);
-        } else {
-          target._actuals[property] = value;
-          target._setAttribute(property, value);
+          value = target._bases[property];
+          if (value === null && property === 'transform') {
+            // Avoid SVG error:
+            // Invalid value for <element> attribute transform="null"
+            value = '';
+          }
         }
+
+        target._actuals[property] = value;
+        target._setAttribute(property, value);
       },
       get: function() {
         return target._actuals[property];
