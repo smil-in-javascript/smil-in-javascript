@@ -60,6 +60,9 @@ var verbose = false;
 
 var animationRecords = {};
 
+// Animations waiting for their target element to be created
+var waitingAnimationRecords = {};
+
 // Implements http://www.w3.org/TR/SVG/animate.html#ClockValueSyntax
 // Converts value to milliseconds.
 function parseClockValue(value) {
@@ -353,8 +356,17 @@ function createAnimationRecord(element) {
 
   var targetRef = animationRecord['xlink:href'];
   if (targetRef && targetRef.indexOf('#') === 0) {
+    targetRef = targetRef.substring(1);
     animationRecord.target =
-        document.getElementById(targetRef.substring(1));
+        document.getElementById(targetRef);
+    if (!animationRecord.target) {
+      var waiting = waitingAnimationRecords[targetRef];
+      if (!waiting) {
+        waiting = [];
+        waitingAnimationRecords[targetRef] = waiting;
+      }
+      waiting.push(animationRecord);
+    }
   } else {
     animationRecord.target = element.parentNode;
   }
@@ -389,6 +401,18 @@ function walkSVG(node) {
     // If the node has an mpath child, it will have been processed in the
     // while loop above.
     createMotionPathAnimation(animationRecords[node]);
+  }
+
+  var waitingList = waitingAnimationRecords[node.id];
+  if (waitingList) {
+    // FIXME: create animations in order by begin time
+    for (var waitingIndex = 0;
+         waitingIndex < waitingList.length;
+         ++waitingIndex) {
+      waitingList[waitingIndex].target = node;
+      createAnimation(waitingList[waitingIndex]);
+    }
+    delete waitingAnimationRecords[node.id];
   }
 }
 

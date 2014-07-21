@@ -39,6 +39,11 @@ function timing_test_impl(callback, desc) {
   }
 
   function readAttribute(element, propertyName) {
+    if (typeof element == 'string' || element instanceof String) {
+      // Specifying elements by id is useful when they may not initially exist.
+      element = document.getElementById(element);
+    }
+
     var attribute;
     switch (propertyName) {
       case 'targetElement':
