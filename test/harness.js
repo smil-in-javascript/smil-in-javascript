@@ -39,6 +39,7 @@ function timing_test_impl(callback, desc) {
   }
 
   function readAttribute(element, propertyName) {
+    var attribute;
     switch (propertyName) {
       case 'targetElement':
         return element.targetElement;
@@ -52,7 +53,13 @@ function timing_test_impl(callback, desc) {
         // FIXME: getAttribute(expectation.propertyName) does not return
         // animated value for polyfillAnimatedElement but does for
         // nativeAnimatedElement.
-        return element.attributes[propertyName].value;
+        attribute = element.attributes[propertyName];
+        if (attribute) {
+          return attribute.value;
+        } else {
+          // This occurs with transform of SVG native elements.
+          return undefined;
+        }
     }
   }
 
@@ -62,6 +69,12 @@ function timing_test_impl(callback, desc) {
 
   function verifyExpectation() {
     var expectation = expectationList[expectationIndex];
+    if (expectation.command) {
+      expectation.command();
+      ++numExpectationMatches;
+      scheduleNext();
+      return;
+    }
     var expectedValue = expectation.expectedValue;
 
     var polyfillAnimatedValue = readAttribute(
@@ -116,6 +129,7 @@ function timing_test_impl(callback, desc) {
   }
 
   var original_at = window.at;
+  var original_executeAt = window.executeAt;
   window.at = function(millis, propertyName, expectedValue,
                        polyfillAnimatedElement, nativeAnimatedElement) {
     expectationList.push({
@@ -126,8 +140,15 @@ function timing_test_impl(callback, desc) {
       nativeAnimatedElement: nativeAnimatedElement
     });
   };
+  window.executeAt = function(millis, command) {
+    expectationList.push({
+      millis: millis,
+      command: command
+    });
+  };
   callback();
   window.at = original_at;
+  window.executeAt = original_executeAt;
 
   scheduleNext();
 }

@@ -386,15 +386,44 @@ function walkSVG(node) {
   }
 
   if (node.nodeName === 'animateMotion') {
+    // If the node has an mpath child, it will have been processed in the
+    // while loop above.
     createMotionPathAnimation(animationRecords[node]);
   }
 }
 
+var mutationObserver = undefined;
+
+function processMutations(mutationRecords) {
+  for (var recordIndex = 0;
+       recordIndex < mutationRecords.length;
+       ++recordIndex) {
+    var record = mutationRecords[recordIndex];
+    if (record.type === 'attributes') {
+      // FIXME: process attributes update
+      continue;
+    }
+
+    for (var addedNodeIndex = 0;
+         addedNodeIndex < record.addedNodes.length;
+         ++addedNodeIndex) {
+      walkSVG(record.addedNodes[addedNodeIndex]);
+    }
+
+    if (record.removedNodes.length > 0) {
+      // FIXME: process removedNodes
+    }
+  }
+}
+
 function updateRecords() {
-  if (Object.keys(animationRecords).length !== 0) {
-    // We have already walked the DOM.
+  if (mutationObserver) {
+    processMutations(mutationObserver.takeRecords());
     return;
   }
+
+  // First time: walk the DOM and create observer.
+
 
   // We would like to use document.querySelectorAll(tag) for each tag in
   // observedTags, but can't yet due to
@@ -405,6 +434,16 @@ function updateRecords() {
   for (var index = 0; index < svgFragmentList.length; ++index) {
     walkSVG(svgFragmentList[index]);
   }
+
+  mutationObserver = new MutationObserver(processMutations);
+  mutationObserver.observe(document, {
+    childList: true,
+    attributes: true,
+    subtree: true,
+    attributeOldValue: true
+    // FIXME: measure performance impact of using observedAttributes
+    // as attributeFilter array
+  });
 }
 
 window.addEventListener('load', updateRecords);
