@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <script src="../../web-animations.js"></script>
+    <script src="../../smil-in-javascript.js"></script>
+
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="800" height="800">
+  <rect width="40" height="20" fill="green" opacity="0.5">
+    <animateMotion calcMode="linear" path="M 100 700 C 352 700 448 100 700 100 Z C 448 100 352 700 100 700"
+      dur="15s" repeatCount="indefinite" rotate="auto-reverse"/>
+  </rect>
+
+  <rect width="40" height="20" fill="red" opacity="0.5">
+    <nativeAnimateMotion calcMode="linear" path="M 100 700 C 352 700 448 100 700 100 Z C 448 100 352 700 100 700"
+      dur="15s" repeatCount="indefinite" rotate="auto-reverse"/>
+  </rect>
+</svg>
+
+  </body>
+</html>

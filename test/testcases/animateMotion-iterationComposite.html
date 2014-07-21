@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <script src="../../web-animations.js"></script>
+    <script src="../../smil-in-javascript.js"></script>
+
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" height="250">
+  <rect id="polyfillRect" x="0" y="0" width="20" height="100" fill="green" opacity="0.5">
+    <animateMotion calcMode="linear" dur="2s" repeatCount="4"
+      path="M 20 10 L 10 20" additive="sum" accumulate="sum"/>
+    <animateMotion calcMode="linear" dur="2s" repeatCount="4"
+      path="M 10 0 L 30 0" additive="sum"/>
+  </rect>
+
+  <rect id="nativeRect" x="0" y="0" width="20" height="100" fill="red" opacity="0.5">
+    <nativeAnimateMotion calcMode="linear" dur="2s" repeatCount="4"
+      path="M 20 10 L 10 20" additive="sum" accumulate="sum"/>
+    <nativeAnimateMotion calcMode="linear" dur="2s" repeatCount="4"
+      path="M 10 0 L 30 0" additive="sum"/>
+  </rect>
+</svg>
+
+  </body>
+</html>
