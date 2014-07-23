@@ -54,6 +54,8 @@ function timing_test_impl(callback, desc) {
         return element.getStartTime();
       case 'currentTime':
         return element.getCurrentTime();
+      case 'css-transform':
+        return getComputedStyle(element).transform;
       default:
         // FIXME: getAttribute(expectation.propertyName) does not return
         // animated value for polyfillAnimatedElement but does for
@@ -89,8 +91,8 @@ function timing_test_impl(callback, desc) {
 
     var matched = false;
     if (Array.isArray(expectedValue)) {
-      if (expectedValue.indexOf(polyfillAnimatedValue) === 0 &&
-          expectedValue.indexOf(nativeAnimatedValue) === 1) {
+      if (expectedValue[0] === polyfillAnimatedValue &&
+          expectedValue[1] === nativeAnimatedValue) {
         matched = true;
       }
     } else {

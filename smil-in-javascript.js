@@ -355,10 +355,16 @@ function createAnimationRecord(element) {
   }
 
   var targetRef = animationRecord['xlink:href'];
-  if (targetRef && targetRef.indexOf('#') === 0) {
+  if (targetRef && targetRef[0] === '#') {
     targetRef = targetRef.substring(1);
     animationRecord.target =
         document.getElementById(targetRef);
+
+    if (!(animationRecord.target instanceof SVGElement)) {
+      // Only animate SVG elements
+      animationRecord.target = null;
+    }
+
     if (!animationRecord.target) {
       var waiting = waitingAnimationRecords[targetRef];
       if (!waiting) {
@@ -403,6 +409,10 @@ function walkSVG(node) {
     createMotionPathAnimation(animationRecords[node]);
   }
 
+  if (!(node instanceof SVGElement)) {
+    // Only animate SVG elements
+    return;
+  }
   var waitingList = waitingAnimationRecords[node.id];
   if (waitingList) {
     // FIXME: create animations in order by begin time
