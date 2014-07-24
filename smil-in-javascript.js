@@ -58,10 +58,96 @@ var observedAttributes = {
 // Control debug logging.
 var verbose = false;
 
+// indexed by animationRecordId
 var animationRecords = {};
 
 // Animations waiting for their target element to be created
 var waitingAnimationRecords = {};
+
+
+/** @constructor */
+var PriorityQueue = function() {
+  // FIXME: use a heap or tree for efficiency
+  this.entries = [];
+};
+
+PriorityQueue.prototype = {
+  insert: function(newEntry) {
+    if (!isFinite(newEntry.scheduleTime)) {
+      throw new Error('newEntry.scheduleTime is not finite');
+    }
+    var entries = this.entries;
+    var index = entries.length;
+    entries.push(null);
+    // loop invariant: entries[index] is available
+    while (index &&
+           entries[index - 1].scheduleTime > newEntry.scheduleTime) {
+      entries[index] = entries[index - 1];
+      --index;
+    }
+    entries[index] = newEntry;
+  },
+  // existingEntry must currently be in the queue
+  remove: function(existingEntry) {
+    var entries = this.entries;
+    var index = 0;
+
+    // could binary search
+    while (index < entries.length &&
+           entries[index] != existingEntry) {
+      ++index;
+    }
+
+    if (index == entries.length) {
+      throw new Error('existingEntry is not in entries');
+    }
+    entries.splice(index, 1);
+  },
+  earliestScheduleTime: function() {
+    var entries = this.entries;
+    if (!entries.length) {
+      return Infinity;
+    }
+    return entries[0].scheduleTime;
+  },
+  // returns null if no entry has scheduleTime <= currentTime
+  extractFirst: function(currentTime) {
+    var entries = this.entries;
+    if (!entries.length || currentTime < entries[0].scheduleTime) {
+      return null;
+    }
+    return entries.shift();
+  }
+};
+
+
+var scheduledAnimationRecords = new PriorityQueue();
+
+function insertAnimationRecordIntoSchedule(animationRecord) {
+  scheduledAnimationRecords.insert(animationRecord);
+}
+
+function removeAnimationRecordFromSchedule(animationRecord) {
+  scheduledAnimationRecords.remove(animationRecord);
+}
+
+function checkScheduledAnimationRecords() {
+  var currentTime = document.timeline.currentTime;
+  var animationRecord;
+  while ((animationRecord =
+          scheduledAnimationRecords.extractFirst(currentTime))) {
+    animationRecord.processNow();
+  }
+}
+
+
+// FIXME: use a custom effect callback instead of polling
+function pollScheduledAnimationRecords() {
+  checkScheduledAnimationRecords();
+  window.requestAnimationFrame(pollScheduledAnimationRecords);
+}
+window.requestAnimationFrame(pollScheduledAnimationRecords);
+
 
 // Implements http://www.w3.org/TR/SVG/animate.html#ClockValueSyntax
 // Converts value to milliseconds.
@@ -92,6 +178,97 @@ function parseClockValue(value) {
       result += parseFloat(components[2]);
     }
     result *= 1000;
+  }
+  return result;
+}
+
+// Implements http://www.w3.org/TR/SMIL3/smil-timing.html#q23
+// Converts value to milliseconds.
+function parseOffsetValue(value) {
+  value = value.trim();
+  if (value.substring(0, 1) === '+') {
+    return parseClockValue(value.substring(1).trim());
+  } else if (value.substring(0, 1) === '-') {
+    return -parseClockValue(value.substring(1).trim());
+  } else {
+    return parseClockValue(value);
+  }
+  var result;
+}
+
+// Used by parseBeginEnd to implement
+// http://www.w3.org/TR/SMIL3/smil-timing.html#Timing-BeginValueListSyntax
+// Returns a TimeValueSpecification, or undefined
+function parseBeginEndValue(value) {
+  var result;
+  value = value.trim();
+  if (value === '') {
+    return undefined;
+  }
+  var initial = value.substring(0, 1);
+  if ((initial >= '0' && initial <= '9') || initial == '+' || initial == '-') {
+    return parseOffsetValue(value);
+  } else if (value.substring(0, 9) === 'wallclock') {
+    // FIXME: support wallclock sync values.
+    return undefined;
+  } else if (value === 'indefinite') {
+    return Infinity;
+  } else {
+    var plusIndex = value.indexOf('+');
+    var minusIndex = value.indexOf('-');
+    var offsetIndex;
+    if (plusIndex === -1) {
+      offsetIndex = minusIndex;
+    } else if (minusIndex === -1) {
+      offsetIndex = plusIndex;
+    } else {
+      offsetIndex = Math.min(plusIndex, minusIndex);
+    }
+    var token;
+    var offset;
+    if (offsetIndex === -1) {
+      token = value;
+      offset = 0;
+    } else {
+      token = value.substring(0, offsetIndex);
+      offset = parseOffsetValue(value.substring(offsetIndex));
+    }
+    var separatorIndex = token.indexOf('.');
+    if (separatorIndex === -1) {
+      // FIXME: support event values
+      return undefined;
+    }
+    var timeSymbol = token.substring(separatorIndex + 1);
+    if (timeSymbol !== 'begin' && timeSymbol !== 'end') {
+      return undefined;
+    }
+    var id = value.substring(0, separatorIndex);
+    result = {};
+    result.id = id;
+    result.timeSymbol = timeSymbol;
+    result.offset = offset;
+    //FIXME: Support Syncbase dependency
+    return undefined;
+  }
+}
+
+// Implements
+// http://www.w3.org/TR/SMIL3/smil-timing.html#Timing-BeginValueListSyntax
+function parseBeginEnd(isBegin, value) {
+  var result = [];
+  var entry;
+  if (value) {
+    var components = value.split(';');
+    for (var index = 0; index < components.length; ++index) {
+      entry = parseBeginEndValue(components[index]);
+      if (entry !== undefined) {
+        result.push(entry);
+      }
+    }
+  }
+  if (!result.length) {
+    var fallbackOffset = isBegin ? 0 : Infinity;
+    result.push(fallbackOffset);
   }
   return result;
 }
@@ -179,10 +356,12 @@ function createAnimation(animationRecord) {
                                   animationRecord.timingInput);
     animationRecord.animation = animation;
 
-    // FIXME: Respect begin and end attributes.
-    animationRecord.player = document.timeline.play(animation);
-    animationRecord.startTime = 0;
-    animationRecord.player.startTime = animationRecord.startTime;
+    if (isFinite(animationRecord.startTime)) {
+      // The animation started before the target existed
+      animationRecord.player =
+          document.timeline.play(animationRecord.animation);
+      animationRecord.player.startTime = animationRecord.startTime;
+    }
   }
 }
 
@@ -339,12 +518,91 @@ function createMotionPathAnimation(animationRecord) {
   }
 }
 
+
+var animationRecordCounter = 0;
+
+/** @constructor */
+var AnimationRecord = function(element) {
+  this.element = element;
+  this.nodeName = element.nodeName;
+  this.parentNode = element.parentNode;
+  this.startTime = Infinity; // not playing
+
+  // Storing an id on the element lets us look up the AnimationRecord during
+  // DOM calls like endElementAt. When we use Blink in JavaScript, we will
+  // run in our own Execution Context, so the animationRecordId attribute
+  // on the element won't be visible to user JavaScript.
+  this.animationRecordId = animationRecordCounter.toString();
+  element.animationRecordId = this.animationRecordId;
+  animationRecords[this.animationRecordId] = this;
+  ++animationRecordCounter;
+
+  this.scheduleTime = Infinity;
+  this.beginInstanceTimes = new PriorityQueue();
+  this.endInstanceTimes = new PriorityQueue();
+};
+
+AnimationRecord.prototype = {
+  updateMainSchedule: function() {
+    var earliest = Math.min(
+        this.beginInstanceTimes.earliestScheduleTime(),
+        this.endInstanceTimes.earliestScheduleTime());
+    if (earliest === this.scheduleTime) {
+      // no need to update main schedule
+      return;
+    }
+
+    if (isFinite(this.scheduleTime)) {
+      removeAnimationRecordFromSchedule(this);
+    }
+    // else this animation record is not currently in the schedule
+
+    this.scheduleTime = earliest;
+    insertAnimationRecordIntoSchedule(this);
+  },
+  addInstanceTime: function(instanceTime, isBegin) {
+    if (!isFinite(instanceTime)) {
+      return;
+    }
+    var queue = isBegin ? this.beginInstanceTimes : this.endInstanceTimes;
+    queue.insert({ scheduleTime: instanceTime });
+    this.updateMainSchedule();
+  },
+  processNow: function() {
+    // this element is no longer in the main schedule
+    this.scheduleTime = Infinity;
+
+    if (this.beginInstanceTimes.earliestScheduleTime() <=
+        this.endInstanceTimes.earliestScheduleTime()) {
+
+      if (this.player) {
+        this.player.cancel();
+      }
+
+      var scheduleTime = this.beginInstanceTimes.extractFirst().scheduleTime;
+      this.startTime = scheduleTime; // used if target is created later
+      if (this.animation) {
+        this.player = document.timeline.play(this.animation);
+        this.player.startTime = this.startTime;
+      }
+      // else target does not exist or is not SVG
+    } else {
+
+      var scheduleTime = this.endInstanceTimes.extractFirst().scheduleTime;
+      if (this.startTime !== Infinity && this.player) {
+        this.player.pause();
+        this.player.currentTime = scheduleTime - this.player.startTime;
+      }
+      this.startTime = Infinity; // not playing
+    }
+
+    this.updateMainSchedule();
+  }
+};
+
+
 function createAnimationRecord(element) {
-  var animationRecord = {
-    element: element,
-    nodeName: element.nodeName,
-    parentNode: element.parentNode
-  };
+  var animationRecord = new AnimationRecord(element);
 
   var attributes = element.attributes;
   for (var index = 0; index < attributes.length; ++index) {
@@ -380,17 +638,31 @@ function createAnimationRecord(element) {
   animationRecord.timingInput = createTimingInput(animationRecord);
   animationRecord.options = createEffectOptions(animationRecord);
 
-  animationRecords[element] = animationRecord;
-
   if (animationRecord.nodeName === 'mpath') {
-    var parentRecord = animationRecords[element.parentNode];
+    var parentRecord = animationRecords[element.parentNode.animationRecordId];
     if (parentRecord) {
       parentRecord.mpathRecord = animationRecord;
     }
-  } else if (animationRecord.nodeName !== 'animateMotion') {
-    createKeyframeAnimation(animationRecord);
+  } else {
+    var beginTimes = parseBeginEnd(true, animationRecord['begin']);
+    for (var index = 0; index < beginTimes.length; ++index) {
+      animationRecord.addInstanceTime(beginTimes[index], true);
+    }
+
+    var endTimes = parseBeginEnd(false, animationRecord['end']);
+    for (var index = 0; index < endTimes.length; ++index) {
+      animationRecord.addInstanceTime(endTimes[index], false);
+    }
+
+    if (animationRecord.nodeName !== 'animateMotion') {
+      createKeyframeAnimation(animationRecord);
+    }
+    // else we have animateMotion, and wait in case we have an mpath child
   }
-  // else we have animateMotion, and wait in case we have an mpath child
+}
+
+function compareAnimationRecordsByStartTime(left, right) {
+  return left.startTime - right.startTime;
 }
 
 function walkSVG(node) {
@@ -406,7 +678,7 @@ function walkSVG(node) {
   if (node.nodeName === 'animateMotion') {
     // If the node has an mpath child, it will have been processed in the
     // while loop above.
-    createMotionPathAnimation(animationRecords[node]);
+    createMotionPathAnimation(animationRecords[node.animationRecordId]);
   }
 
   if (!(node instanceof SVGElement)) {
@@ -415,7 +687,7 @@ function walkSVG(node) {
   }
   var waitingList = waitingAnimationRecords[node.id];
   if (waitingList) {
-    // FIXME: create animations in order by begin time
+    waitingList.sort(compareAnimationRecordsByStartTime);
     for (var waitingIndex = 0;
          waitingIndex < waitingList.length;
          ++waitingIndex) {
@@ -429,6 +701,8 @@ function walkSVG(node) {
 var mutationObserver = undefined;
 
 function processMutations(mutationRecords) {
+  var scheduleCheckRequired = false;
+
   for (var recordIndex = 0;
        recordIndex < mutationRecords.length;
        ++recordIndex) {
@@ -442,11 +716,15 @@ function processMutations(mutationRecords) {
          addedNodeIndex < record.addedNodes.length;
          ++addedNodeIndex) {
       walkSVG(record.addedNodes[addedNodeIndex]);
+      scheduleCheckRequired = true;
     }
 
     if (record.removedNodes.length > 0) {
       // FIXME: process removedNodes
     }
+  }
+  if (scheduleCheckRequired) {
+    checkScheduledAnimationRecords();
   }
 }
 
@@ -478,6 +756,7 @@ function updateRecords() {
     // FIXME: measure performance impact of using observedAttributes
     // as attributeFilter array
   });
+  checkScheduledAnimationRecords();
 }
 
 window.addEventListener('load', updateRecords);
@@ -486,11 +765,15 @@ function millisecondsToSeconds(milliseconds) {
   return milliseconds / 1000;
 }
 
+function secondsToMilliseconds(seconds) {
+  return seconds * 1000;
+}
+
 Object.defineProperty(SVGPolyfillAnimationElement.prototype, 'targetElement', {
   enumerable: true,
   get: function() {
     updateRecords();
-    var animationRecord = animationRecords[this];
+    var animationRecord = animationRecords[this.animationRecordId];
     if (animationRecord) {
       return animationRecord.target;
     } else {
@@ -502,8 +785,13 @@ Object.defineProperty(SVGPolyfillAnimationElement.prototype, 'targetElement', {
 
 SVGPolyfillAnimationElement.prototype.getStartTime = function() {
     updateRecords();
-    var animationRecord = animationRecords[this];
+    checkScheduledAnimationRecords();
+    var animationRecord = animationRecords[this.animationRecordId];
     if (animationRecord) {
+      // FIXME: if the 'current interval' is in the future, should return the
+      // begin time for that interval. If there is no current interval, should
+      // throw INVALID_STATE_ERR DOMException
+      // For now, we assume an animation is in progress.
       return millisecondsToSeconds(animationRecord.startTime);
     } else {
       throw new Error('getStartTime() on unknown ' +
@@ -518,13 +806,47 @@ SVGPolyfillAnimationElement.prototype.getCurrentTime = function() {
 
 SVGPolyfillAnimationElement.prototype.getSimpleDuration = function() {
     updateRecords();
-    var animationRecord = animationRecords[this];
+    var animationRecord = animationRecords[this.animationRecordId];
     if (animationRecord) {
       return millisecondsToSeconds(animationRecord.timingInput.duration);
     } else {
       throw new Error('getSimpleDuration() on unknown ' +
           this.nodeName + ' ' + this.id);
     }
+};
+
+function instanceTimeRequest(node, methodName, offsetSeconds, isBegin) {
+    updateRecords();
+    var animationRecord = animationRecords[node.animationRecordId];
+    if (animationRecord) {
+      var instanceTime = document.timeline.currentTime +
+          secondsToMilliseconds(offsetSeconds);
+      animationRecord.addInstanceTime(instanceTime, isBegin);
+      checkScheduledAnimationRecords();
+    } else {
+      throw new Error(methodName + '() on unknown ' +
+          node.nodeName + ' ' + node.id);
+    }
+}
+
+SVGPolyfillAnimationElement.prototype.beginElement = function() {
+  instanceTimeRequest(
+      this, 'beginElement', 0, true);
+};
+
+SVGPolyfillAnimationElement.prototype.beginElementAt = function(offset) {
+  instanceTimeRequest(
+      this, 'beginElementAt', offset, true);
+};
+
+SVGPolyfillAnimationElement.prototype.endElement = function() {
+  instanceTimeRequest(
+      this, 'endElement', 0, false);
+};
+
+SVGPolyfillAnimationElement.prototype.endElementAt = function(offset) {
+  instanceTimeRequest(
+      this, 'endElementAt', offset, false);
 };
 
 })();
