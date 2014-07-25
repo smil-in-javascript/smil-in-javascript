@@ -120,33 +120,30 @@ PriorityQueue.prototype = {
   }
 };
 
+var masterScheduler = {
+  scheduledAnimationRecords: new PriorityQueue(),
 
-var scheduledAnimationRecords = new PriorityQueue();
-
-function insertAnimationRecordIntoSchedule(animationRecord) {
-  scheduledAnimationRecords.insert(animationRecord);
-}
-
-function removeAnimationRecordFromSchedule(animationRecord) {
-  scheduledAnimationRecords.remove(animationRecord);
-}
-
-function checkScheduledAnimationRecords() {
-  var currentTime = document.timeline.currentTime;
-  var animationRecord;
-  while ((animationRecord =
-          scheduledAnimationRecords.extractFirst(currentTime))) {
-    animationRecord.processNow();
+  insertAnimationRecord: function(animationRecord) {
+    this.scheduledAnimationRecords.insert(animationRecord);
+  },
+  removeAnimationRecord: function(animationRecord) {
+    this.scheduledAnimationRecords.remove(animationRecord);
+  },
+  checkSchedule: function() {
+    var currentTime = document.timeline.currentTime;
+    var animationRecord;
+    while ((animationRecord =
+            this.scheduledAnimationRecords.extractFirst(currentTime))) {
+      animationRecord.processNow();
+    }
   }
-}
-
+};
 
 // FIXME: use a custom effect callback instead of polling
-function pollScheduledAnimationRecords() {
-  checkScheduledAnimationRecords();
-  window.requestAnimationFrame(pollScheduledAnimationRecords);
-}
-window.requestAnimationFrame(pollScheduledAnimationRecords);
+window.requestAnimationFrame(function pollSchedule() {
+  masterScheduler.checkSchedule();
+  window.requestAnimationFrame(pollSchedule);
+});
 
 
 // Implements http://www.w3.org/TR/SVG/animate.html#ClockValueSyntax
@@ -186,9 +183,9 @@ function parseClockValue(value) {
 // Converts value to milliseconds.
 function parseOffsetValue(value) {
   value = value.trim();
-  if (value.substring(0, 1) === '+') {
+  if (value[0] === '+') {
     return parseClockValue(value.substring(1).trim());
-  } else if (value.substring(0, 1) === '-') {
+  } else if (value[0] === '-') {
     return -parseClockValue(value.substring(1).trim());
   } else {
     return parseClockValue(value);
@@ -205,7 +202,7 @@ function parseBeginEndValue(value) {
   if (value === '') {
     return undefined;
   }
-  var initial = value.substring(0, 1);
+  var initial = value[0];
   if ((initial >= '0' && initial <= '9') || initial == '+' || initial == '-') {
     return parseOffsetValue(value);
   } else if (value.substring(0, 9) === 'wallclock') {
@@ -528,18 +525,68 @@ var AnimationRecord = function(element) {
   this.parentNode = element.parentNode;
   this.startTime = Infinity; // not playing
 
-  // Storing an id on the element lets us look up the AnimationRecord during
-  // DOM calls like endElementAt. When we use Blink in JavaScript, we will
-  // run in our own Execution Context, so the animationRecordId attribute
-  // on the element won't be visible to user JavaScript.
   this.animationRecordId = animationRecordCounter.toString();
-  element.animationRecordId = this.animationRecordId;
-  animationRecords[this.animationRecordId] = this;
   ++animationRecordCounter;
 
   this.scheduleTime = Infinity;
   this.beginInstanceTimes = new PriorityQueue();
   this.endInstanceTimes = new PriorityQueue();
+
+  var attributes = element.attributes;
+  for (var index = 0; index < attributes.length; ++index) {
+    var attributeName = attributes[index].name;
+    if (attributeName in observedAttributes) {
+      this[attributeName] = attributes[index].value;
+    }
+  }
+
+  var targetRef = this['xlink:href'];
+  if (targetRef && targetRef[0] === '#') {
+    targetRef = targetRef.substring(1);
+    this.target =
+        document.getElementById(targetRef);
+
+    if (!(this.target instanceof SVGElement)) {
+      // Only animate SVG elements
+      this.target = null;
+    }
+
+    if (!this.target) {
+      var waiting = waitingAnimationRecords[targetRef];
+      if (!waiting) {
+        waiting = [];
+        waitingAnimationRecords[targetRef] = waiting;
+      }
+      waiting.push(this);
+    }
+  } else {
+    this.target = element.parentNode;
+  }
+
+  this.timingInput = createTimingInput(this);
+  this.options = createEffectOptions(this);
+
+  if (this.nodeName === 'mpath') {
+    var parentRecord = animationRecords[element.parentNode.animationRecordId];
+    if (parentRecord) {
+      parentRecord.mpathRecord = this;
+    }
+  } else {
+    var beginTimes = parseBeginEnd(true, this['begin']);
+    for (var index = 0; index < beginTimes.length; ++index) {
+      this.addInstanceTime(beginTimes[index], true);
+    }
+
+    var endTimes = parseBeginEnd(false, this['end']);
+    for (var index = 0; index < endTimes.length; ++index) {
+      this.addInstanceTime(endTimes[index], false);
+    }
+
+    if (this.nodeName !== 'animateMotion') {
+      createKeyframeAnimation(this);
+    }
+    // else we have animateMotion, and wait in case we have an mpath child
+  }
 };
 
 AnimationRecord.prototype = {
@@ -553,12 +600,12 @@ AnimationRecord.prototype = {
     }
 
     if (isFinite(this.scheduleTime)) {
-      removeAnimationRecordFromSchedule(this);
+      masterScheduler.removeAnimationRecord(this);
     }
     // else this animation record is not currently in the schedule
 
     this.scheduleTime = earliest;
-    insertAnimationRecordIntoSchedule(this);
+    masterScheduler.insertAnimationRecord(this);
   },
   addInstanceTime: function(instanceTime, isBegin) {
     if (!isFinite(instanceTime)) {
@@ -600,74 +647,20 @@ AnimationRecord.prototype = {
   }
 };
 
-
-function createAnimationRecord(element) {
-  var animationRecord = new AnimationRecord(element);
-
-  var attributes = element.attributes;
-  for (var index = 0; index < attributes.length; ++index) {
-    var attributeName = attributes[index].name;
-    if (attributeName in observedAttributes) {
-      animationRecord[attributeName] = attributes[index].value;
-    }
-  }
-
-  var targetRef = animationRecord['xlink:href'];
-  if (targetRef && targetRef[0] === '#') {
-    targetRef = targetRef.substring(1);
-    animationRecord.target =
-        document.getElementById(targetRef);
-
-    if (!(animationRecord.target instanceof SVGElement)) {
-      // Only animate SVG elements
-      animationRecord.target = null;
-    }
-
-    if (!animationRecord.target) {
-      var waiting = waitingAnimationRecords[targetRef];
-      if (!waiting) {
-        waiting = [];
-        waitingAnimationRecords[targetRef] = waiting;
-      }
-      waiting.push(animationRecord);
-    }
-  } else {
-    animationRecord.target = element.parentNode;
-  }
-
-  animationRecord.timingInput = createTimingInput(animationRecord);
-  animationRecord.options = createEffectOptions(animationRecord);
-
-  if (animationRecord.nodeName === 'mpath') {
-    var parentRecord = animationRecords[element.parentNode.animationRecordId];
-    if (parentRecord) {
-      parentRecord.mpathRecord = animationRecord;
-    }
-  } else {
-    var beginTimes = parseBeginEnd(true, animationRecord['begin']);
-    for (var index = 0; index < beginTimes.length; ++index) {
-      animationRecord.addInstanceTime(beginTimes[index], true);
-    }
-
-    var endTimes = parseBeginEnd(false, animationRecord['end']);
-    for (var index = 0; index < endTimes.length; ++index) {
-      animationRecord.addInstanceTime(endTimes[index], false);
-    }
-
-    if (animationRecord.nodeName !== 'animateMotion') {
-      createKeyframeAnimation(animationRecord);
-    }
-    // else we have animateMotion, and wait in case we have an mpath child
-  }
-}
-
 function compareAnimationRecordsByStartTime(left, right) {
   return left.startTime - right.startTime;
 }
 
 function walkSVG(node) {
   if (node.nodeName in observedTags) {
-    createAnimationRecord(node);
+    var animationRecord = new AnimationRecord(node);
+
+    // Storing an id on the element lets us look up the AnimationRecord during
+    // DOM calls like endElementAt. When we use Blink in JavaScript, we will
+    // run in our own Execution Context, so the animationRecordId attribute
+    // on the element won't be visible to user JavaScript.
+    node.animationRecordId = animationRecord.animationRecordId;
+    animationRecords[animationRecord.animationRecordId] = animationRecord;
   }
   var child = node.firstChild;
   while (child) {
@@ -724,7 +717,7 @@ function processMutations(mutationRecords) {
     }
   }
   if (scheduleCheckRequired) {
-    checkScheduledAnimationRecords();
+    masterScheduler.checkSchedule();
   }
 }
 
@@ -746,6 +739,7 @@ function updateRecords() {
   for (var index = 0; index < svgFragmentList.length; ++index) {
     walkSVG(svgFragmentList[index]);
   }
+  masterScheduler.checkSchedule();
 
   mutationObserver = new MutationObserver(processMutations);
   mutationObserver.observe(document, {
@@ -756,7 +750,6 @@ function updateRecords() {
     // FIXME: measure performance impact of using observedAttributes
     // as attributeFilter array
   });
-  checkScheduledAnimationRecords();
 }
 
 window.addEventListener('load', updateRecords);
@@ -785,7 +778,7 @@ Object.defineProperty(SVGPolyfillAnimationElement.prototype, 'targetElement', {
 
 SVGPolyfillAnimationElement.prototype.getStartTime = function() {
     updateRecords();
-    checkScheduledAnimationRecords();
+    masterScheduler.checkSchedule();
     var animationRecord = animationRecords[this.animationRecordId];
     if (animationRecord) {
       // FIXME: if the 'current interval' is in the future, should return the
@@ -822,7 +815,7 @@ function instanceTimeRequest(node, methodName, offsetSeconds, isBegin) {
       var instanceTime = document.timeline.currentTime +
           secondsToMilliseconds(offsetSeconds);
       animationRecord.addInstanceTime(instanceTime, isBegin);
-      checkScheduledAnimationRecords();
+      masterScheduler.checkSchedule();
     } else {
       throw new Error(methodName + '() on unknown ' +
           node.nodeName + ' ' + node.id);

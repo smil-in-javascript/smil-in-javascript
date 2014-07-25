@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <script src="../../web-animations.js"></script>
+    <script src="../../smil-in-javascript.js"></script>
+    <!-- FIXME: use the test harness
+    <script src="../harness.js"></script>
+    <script src="simple-list-begin-end-check.js"></script> -->
+
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="600" height="600">
+  <circle id="polyfillCircle" cx="300" cy="300" r="10" fill="green" opacity="0.5">
+    <animate attributeName="r" from="200" to="100" dur="4s" begin="1s;3s;4s" end="0s;2s;5s;6s" fill="freeze"/>
+  </circle>
+
+  <circle id="nativeCircle" cx="300" cy="300" r="10" fill="red" opacity="0.5">
+    <nativeAnimate attributeName="r" from="200" to="100" dur="4s" begin="1s;3s;4s" end="0s;2s;5s;6s" fill="freeze"/>
+  </circle>
+</svg>
+
+  </body>
+</html>
