@@ -3,20 +3,23 @@
   <body>
     <script src="../../web-animations.js"></script>
     <script src="../../smil-in-javascript.js"></script>
+    <script src="../harness.js"></script>
+    <script src="animateMotion-iterationComposite-check.js"></script>
 
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" height="250">
-  <rect id="polyfillRect" x="0" y="0" width="20" height="100" fill="green" opacity="0.5">
-    <animateMotion calcMode="linear" dur="2s" repeatCount="4"
-      path="M 20 10 L 10 20" additive="sum" accumulate="sum"/>
-    <animateMotion calcMode="linear" dur="2s" repeatCount="4"
-      path="M 10 0 L 30 0" additive="sum"/>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="800" height="800">
+  <rect id="polyfillRect" x="300" y="100" width="200" height="20" fill="green" opacity="0.5">
+    <!-- By using Pythagorean triples, we avoid rounding issues in transform strings -->
+    <animateMotion calcMode="linear" dur="2s" repeatCount="3"
+      path="M 30 -40 L 60 -80" additive="sum" accumulate="sum"/>
+    <animateMotion calcMode="linear" dur="2s" repeatCount="3"
+      path="M -50 120 L -100 240" additive="sum"/>
   </rect>
 
-  <rect id="nativeRect" x="0" y="0" width="20" height="100" fill="red" opacity="0.5">
-    <nativeAnimateMotion calcMode="linear" dur="2s" repeatCount="4"
-      path="M 20 10 L 10 20" additive="sum" accumulate="sum"/>
-    <nativeAnimateMotion calcMode="linear" dur="2s" repeatCount="4"
-      path="M 10 0 L 30 0" additive="sum"/>
+  <rect id="nativeRect" x="300" y="100" width="200" height="20" fill="red" opacity="0.5">
+    <nativeAnimateMotion calcMode="linear" dur="2s" repeatCount="3"
+      path="M 30 -40 L 60 -80" additive="sum" accumulate="sum"/>
+    <nativeAnimateMotion calcMode="linear" dur="2s" repeatCount="3"
+      path="M -50 120 L -100 240" additive="sum"/>
   </rect>
 </svg>
 
