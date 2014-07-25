@@ -622,8 +622,13 @@ AnimationRecord.prototype = {
     if (this.beginInstanceTimes.earliestScheduleTime() <=
         this.endInstanceTimes.earliestScheduleTime()) {
 
-      if (this.player) {
-        this.player.cancel();
+      // Start time is finite if we are currently playing
+      if (this.startTime !== Infinity) {
+        if (this.player) {
+          this.player.cancel();
+        }
+
+        this.dispatchEvent('end', 0);
       }
 
       var scheduleTime = this.beginInstanceTimes.extractFirst().scheduleTime;
@@ -633,6 +638,8 @@ AnimationRecord.prototype = {
         this.player.startTime = this.startTime;
       }
       // else target does not exist or is not SVG
+
+      this.dispatchEvent('begin', 0);
     } else {
 
       var scheduleTime = this.endInstanceTimes.extractFirst().scheduleTime;
@@ -641,9 +648,19 @@ AnimationRecord.prototype = {
         this.player.currentTime = scheduleTime - this.player.startTime;
       }
       this.startTime = Infinity; // not playing
+
+      this.dispatchEvent('end', 0);
     }
 
     this.updateMainSchedule();
+  },
+  dispatchEvent : function(eventType, detailArg) {
+    // detailArg is the repeat count for repeat events
+
+    var timeEvent = new Event(eventType);
+    timeEvent.view = document.defaultView;
+    timeEvent.detail = detailArg;
+    this.element.dispatchEvent(timeEvent);
   }
 };
 

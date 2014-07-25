@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <script src="../../web-animations.js"></script>
+    <script src="../../smil-in-javascript.js"></script>
+    <!-- FIXME: use the test harness
+    <script src="../harness.js"></script>
+    <script src="begin-events.js"></script> -->
+
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="600" height="600">
+  <circle id="polyfillCircle" cx="300" cy="300" r="10" fill="green" opacity="0.5">
+    <animate id="polyfillAnim" attributeName="r" from="200" to="100" dur="4s" begin="1s;3s;4s" end="0s;2s;5s;6s" fill="freeze"/>
+  </circle>
+
+  <circle id="nativeCircle" cx="300" cy="300" r="10" fill="red" opacity="0.5">
+    <nativeAnimate id="nativeAnim" attributeName="r" from="200" to="100" dur="4s" begin="1s;3s;4s" end="0s;2s;5s;6s" fill="freeze"/>
+  </circle>
+</svg>
+
+<script>
+
+// FIXME: move this test to the test harness
+
+var expectedCalls = [
+  'polyfillBegin',
+  'polyfillEnd',
+  'polyfillBegin',
+  'polyfillEnd',
+  'polyfillBegin',
+  'polyfillEnd',
+  'polyfillEnd'
+];
+
+function assert(condition, message) {
+  console.log((condition ? 'PASSED: ' : 'FAILED: ') + message);
+}
+
+function processEvent(name, e) {
+  var polyfillAnim = document.getElementById('polyfillAnim');
+
+  assert(expectedCalls.length && name === expectedCalls[0], 'event name');
+  expectedCalls.shift();
+
+  assert(e.target == polyfillAnim, 'event target');
+  assert(e.view == document.defaultView, 'event view');
+  assert(e.detail.toString() === '0', 'event detail');
+
+  if (!expectedCalls.length) {
+    console.log('PASSED events test');
+  }
+}
+
+function polyfillBegin(e) {
+  processEvent('polyfillBegin', e);
+}
+
+function polyfillEnd(e) {
+  processEvent('polyfillEnd', e);
+}
+
+function nativeBegin(e) {
+  processEvent('nativeBegin', e);
+}
+
+function nativeEnd(e) {
+  processEvent('nativeEnd', e);
+}
+
+function registerListeners() {
+  var polyfillAnim = document.getElementById('polyfillAnim');
+  var nativeAnim = document.getElementById('nativeAnim');
+  polyfillAnim.addEventListener('begin', polyfillBegin);
+  polyfillAnim.addEventListener('end', polyfillEnd);
+  nativeAnim.addEventListener('begin', nativeBegin);
+  nativeAnim.addEventListener('end', nativeEnd);
+}
+
+window.addEventListener('load', registerListeners);
+
+</script>
+
+  </body>
+</html>
