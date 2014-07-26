@@ -644,8 +644,13 @@ AnimationRecord.prototype = {
 
       var scheduleTime = this.endInstanceTimes.extractFirst().scheduleTime;
       if (this.startTime !== Infinity && this.player) {
-        this.player.pause();
-        this.player.currentTime = scheduleTime - this.player.startTime;
+        if (this.fill === 'freeze') {
+          this.player.pause();
+          this.player.currentTime = scheduleTime - this.player.startTime;
+        } else {
+          this.player.cancel();
+          this.player = null;
+        }
       }
       this.startTime = Infinity; // not playing
 
@@ -654,7 +659,7 @@ AnimationRecord.prototype = {
 
     this.updateMainSchedule();
   },
-  dispatchEvent : function(eventType, detailArg) {
+  dispatchEvent: function(eventType, detailArg) {
     // detailArg is the repeat count for repeat events
 
     var timeEvent = new Event(eventType);
