@@ -289,6 +289,9 @@ AnimationTimeline.prototype = {
       player.currentTime = pauseAt;
     });
 
+    this._freezeClockForTesting(pauseAt);
+  },
+  _freezeClockForTesting: function(pauseAt) {
     delete this.currentTime;
     Object.defineProperty(this, 'currentTime', {
       configurable: true,

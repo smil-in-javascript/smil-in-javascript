@@ -35,7 +35,7 @@ function timing_test_impl(callback, desc) {
       svgFragmentList[fragmentIndex].pauseAnimations();
       svgFragmentList[fragmentIndex].setCurrentTime(millis / 1000);
     }
-    document.timeline._pauseAnimationsForTesting(millis);
+    document.timeline._freezeClockForTesting(millis);
   }
 
   function readAttribute(element, propertyName) {
@@ -74,6 +74,13 @@ function timing_test_impl(callback, desc) {
     return Math.abs(first - second) < 1E-6;
   }
 
+  function match(observedValue, expectedValue) {
+    if (typeof expectedValue === 'number') {
+      return roughlyEqual(observedValue, expectedValue);
+    }
+    return observedValue === expectedValue;
+  }
+
   function verifyExpectation() {
     var expectation = expectationList[expectationIndex];
     if (expectation.command) {
@@ -89,22 +96,13 @@ function timing_test_impl(callback, desc) {
     var nativeAnimatedValue = readAttribute(
         expectation.nativeAnimatedElement, expectation.propertyName);
 
-    var matched = false;
+    var matched;
     if (Array.isArray(expectedValue)) {
-      if (expectedValue[0] === polyfillAnimatedValue &&
-          expectedValue[1] === nativeAnimatedValue) {
-        matched = true;
-      }
+      matched = match(polyfillAnimatedValue, expectedValue[0]) &&
+                match(nativeAnimatedValue, expectedValue[1]);
     } else {
-      if (typeof expectedValue == 'number') {
-        if (roughlyEqual(parseFloat(polyfillAnimatedValue), expectedValue) &&
-            roughlyEqual(parseFloat(nativeAnimatedValue), expectedValue)) {
-          matched = true;
-        }
-      } else if (polyfillAnimatedValue === expectedValue &&
-                 nativeAnimatedValue === expectedValue) {
-        matched = true;
-      }
+      matched = match(polyfillAnimatedValue, expectedValue) &&
+                match(nativeAnimatedValue, expectedValue);
     }
 
     if (verbose || !matched) {
