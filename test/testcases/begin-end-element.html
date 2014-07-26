@@ -3,49 +3,19 @@
   <body>
     <script src="../../web-animations.js"></script>
     <script src="../../smil-in-javascript.js"></script>
-    <!-- <script src="../harness.js"></script>
-    <script src="begin-end-element-check.js"></script> -->
+    <script src="../harness.js"></script>
+    <script src="begin-end-element-check.js"></script>
 
-    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="500" height="500">
-      <rect id="polyfillFirstRect" x="10" y="10" width="100" height="100" fill="green" opacity="0.5"/>
-      <rect id="polyfillSecondRect" x="120" y="10" width="100" height="100" fill="green" opacity="0.5"/>
+    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="600" height="600">
+      <rect id="polyfillFirstRect" x="110" y="10" width="100" height="100" fill="green" opacity="0.5"/>
+      <rect id="polyfillSecondRect" x="220" y="110" width="100" height="100" fill="green" opacity="0.5"/>
+      <animateTransform id="polyfillFirstAnim" xlink:href="#polyfillFirstRect" attributeName="transform" type="translate" from="0,150" to="-100,0" dur="10s" begin="indefinite" end="indefinite" fill="freeze"/>
+      <animateTransform id="polyfillSecondAnim" xlink:href="#polyfillSecondRect" attributeName="transform" type="translate" from="0,-200" to="50" dur="10s" begin="indefinite" end="indefinite"/>
 
-      <animateMotion id="polyfillFirstAnim" xlink:href="#polyfillFirstRect" additive="sum" calcMode="linear" path="M 0 0 L 0 400" dur="5s" begin="indefinite" end="indefinite" fill="freeze"/>
-      <animateMotion id="polyfillSecondAnim" xlink:href="#polyfillSecondRect" additive="sum" calcMode="linear" path="M 0 0 L 0 400" dur="5s" begin="indefinite" end="indefinite" fill="freeze"/>
-
-      <rect id="nativeFirstRect" x="10" y="10" width="100" height="100" fill="red" opacity="0.5"/>
-      <rect id="nativeSecondRect" x="120" y="10" width="100" height="100" fill="red" opacity="0.5"/>
-
-      <nativeAnimateMotion id="nativeFirstAnim" xlink:href="#nativeFirstRect" additive="sum" calcMode="linear" path="M 0 0 L 0 400" dur="5s" begin="indefinite" end="indefinite" fill="freeze"/>
-      <nativeAnimateMotion id="nativeSecondAnim" xlink:href="#nativeSecondRect" additive="sum" calcMode="linear" path="M 0 0 L 0 400" dur="5s" begin="indefinite" end="indefinite" fill="freeze"/>
-    <script>
-      'use strict';
-      var polyfillFirstRect = document.getElementById('polyfillFirstRect');
-      var nativeFirstRect = document.getElementById('nativeFirstRect');
-      var polyfillSecondRect = document.getElementById('polyfillSecondRect');
-      var nativeSecondRect = document.getElementById('nativeSecondRect');
-
-      // FIXME: re-implement in begin-end-element-check.js using the test harness
-      setTimeout(function() {
-        polyfillFirstAnim.beginElement();
-        nativeFirstAnim.beginElement();
-        polyfillSecondAnim.beginElementAt(1);
-        nativeSecondAnim.beginElementAt(1);
-        polyfillFirstAnim.beginElementAt(2);
-        nativeFirstAnim.beginElementAt(2);
-      }, 1000);
-
-      setTimeout(function() {
-        polyfillFirstAnim.endElement();
-        nativeFirstAnim.endElement();
-        polyfillSecondAnim.endElementAt(1);
-        nativeSecondAnim.endElementAt(1);
-        polyfillFirstAnim.endElementAt(2);
-        nativeFirstAnim.endElementAt(2);
-      }, 3500);
-
-    </script>
-
+      <rect id="nativeFirstRect" x="110" y="10" width="100" height="100" fill="red" opacity="0.5"/>
+      <rect id="nativeSecondRect" x="220" y="110" width="100" height="100" fill="red" opacity="0.5"/>
+      <animateTransform id="nativeFirstAnim" xlink:href="#nativeFirstRect" attributeName="transform" type="translate" from="0,150" to="-100,0" dur="10s" begin="indefinite" end="indefinite" fill="freeze"/>
+      <animateTransform id="nativeSecondAnim" xlink:href="#nativeSecondRect" attributeName="transform" type="translate" from="0,-200" to="50" dur="10s" begin="indefinite" end="indefinite"/>
     </svg>
 
   </body>
