@@ -304,6 +304,10 @@ function createTimingInput(animationRecord) {
     // where we must inspect the inherited fillDefault attribute.
   }
 
+  if (animationRecord.calcMode === 'paced') {
+    timingInput.easing = 'paced';
+  }
+
   return timingInput;
 }
 
