@@ -23,10 +23,10 @@ timing_test(function() {
   at(10000, 'cx', 300, polyfillCircle, nativeCircle);
   at(10500, 'cy', 260, polyfillCircle, nativeCircle);
   at(11000, 'r', 120, polyfillCircle, nativeCircle);
-  at(12000, 'cx', 300, polyfillCircle, nativeCircle);
+  at(12000, 'cx', 100, polyfillCircle, nativeCircle); // initial value
   at(12500, 'cy', 300, polyfillCircle, nativeCircle);
-  at(13000, 'r', 120, polyfillCircle, nativeCircle);
-  at(14000, 'cx', 300, polyfillCircle, nativeCircle);
-  at(14500, 'cy', 310, polyfillCircle, nativeCircle);
-  at(15000, 'r', 120, polyfillCircle, nativeCircle);
+  at(13000, 'r', 120, polyfillCircle, nativeCircle); // frozen value
+  at(14000, 'cx', 100, polyfillCircle, nativeCircle); // initial value
+  at(14500, 'cy', 310, polyfillCircle, nativeCircle); // frozen value
+  at(15000, 'r', 120, polyfillCircle, nativeCircle); // frozen value
 }, 'begin/end list');
