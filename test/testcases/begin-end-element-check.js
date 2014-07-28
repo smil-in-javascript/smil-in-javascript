@@ -24,12 +24,17 @@ timing_test(function() {
 
   executeAt(1000, beginElements);
   at(2000, 'transform', undefined, polyfillSecondRect, nativeSecondRect);
-  at(3000, 'transform', 'translate(-20, 120)', polyfillFirstRect, nativeFirstRect);
-  at(5000, 'transform', 'translate(-40, 90)', polyfillFirstRect, nativeFirstRect);
-  at(6000, 'transform', 'translate(10, -160)', polyfillSecondRect, nativeSecondRect);
+  at(3000, 'transform', 'translate(-20, 120)',
+      polyfillFirstRect, nativeFirstRect);
+  at(5000, 'transform', 'translate(-40, 90)',
+      polyfillFirstRect, nativeFirstRect);
+  at(6000, 'transform', 'translate(10, -160)',
+      polyfillSecondRect, nativeSecondRect);
   executeAt(8000, endElements);
-  at(9000, 'transform', 'translate(-20, 120)', polyfillFirstRect, nativeFirstRect);
+  at(9000, 'transform', 'translate(-20, 120)',
+      polyfillFirstRect, nativeFirstRect);
   at(10000, 'transform', '', polyfillSecondRect, nativeSecondRect);
   at(12000, 'transform', '', polyfillSecondRect, nativeSecondRect);
-  at(13000, 'transform', 'translate(-40, 90)', polyfillFirstRect, nativeFirstRect);
+  at(13000, 'transform', 'translate(-40, 90)',
+      polyfillFirstRect, nativeFirstRect);
 }, 'beginElement');
