@@ -38,6 +38,17 @@ function timing_test_impl(callback, desc) {
     document.timeline._freezeClockForTesting(millis);
   }
 
+  function currentExpectation(requiredProperty) {
+    if (expectationIndex === expectationList.length) {
+      throw new Error('Expectation ' + requiredProperty + ' late and unexpected');
+    }
+    var expectation = expectationList[expectationIndex];
+    if (!expectation.hasOwnProperty(requiredProperty)) {
+      throw new Error('Expectation ' + requiredProperty + ' unexpected');
+    }
+    return expectation;
+  }
+
   function readAttribute(element, propertyName) {
     if (typeof element == 'string' || element instanceof String) {
       // Specifying elements by id is useful when they may not initially exist.
@@ -82,16 +93,7 @@ function timing_test_impl(callback, desc) {
   }
 
   function verifyExpectation() {
-    var expectation = expectationList[expectationIndex];
-    if (expectation.command) {
-      expectation.command();
-      ++numExpectationMatches;
-      scheduleNext();
-      return;
-    }
-    if (expectation.eventType) {
-      throw new Error('verifyExpectation call unexpected for event');
-    }
+    var expectation = currentExpectation('propertyName');
     var expectedValue = expectation.expectedValue;
 
     var polyfillAnimatedValue = readAttribute(
@@ -123,14 +125,15 @@ function timing_test_impl(callback, desc) {
     scheduleNext();
   }
 
+  function executeCommand() {
+    var expectation = currentExpectation('command');
+    expectation.command();
+    ++numExpectationMatches;
+    scheduleNext();
+  }
+
   function verifyEventExpectation(eventType, e) {
-    if (expectationIndex === expectationIndex.length) {
-      throw new Error('verifyEventExpectation call late and unexpected');
-    }
-    var expectation = expectationList[expectationIndex];
-    if (!expectation.eventType) {
-      throw new Error('verifyEventExpectation call unexpected');
-    }
+    var expectation = currentExpectation('eventType');
     var matched = true;
 
     function assert(condition, message) {
@@ -153,16 +156,49 @@ function timing_test_impl(callback, desc) {
     scheduleNext();
   }
 
+  function observeDummyMutation() {
+    var dummyNode =
+        document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    var mutationObserver = new MutationObserver(function () {
+      var expectation = currentExpectation('observeMutations');
+
+      mutationObserver.disconnect();
+      document.body.removeChild(dummyNode);
+
+      ++numExpectationMatches;
+      scheduleNext();
+    });
+    mutationObserver.observe(document, {
+      childList: true,
+      subtree: true
+    });
+    document.body.appendChild(dummyNode);
+  }
+
   function scheduleNext() {
     ++expectationIndex;
     if (expectationIndex < expectationList.length) {
       var expectation = expectationList[expectationIndex];
       setTime(expectation.millis);
 
-      if (!expectation.eventType) {
+      if (expectation.propertyName) {
         window.requestAnimationFrame(verifyExpectation);
+        return;
       }
-      // else we wait for an event instead of a RAF
+      if (expectation.command) {
+        window.requestAnimationFrame(executeCommand);
+        return;
+      }
+      if (expectation.eventType) {
+        // we wait for an event instead of a RAF
+        return;
+      }
+      if (expectation.observeMutations) {
+        observeDummyMutation();
+        return;
+      }
+      throw new Error('Expectation is poorly formed');
+
     } else if (numExpectationMatches === expectationList.length) {
       console.log('PASSED: ' + desc);
     } else {
@@ -179,6 +215,7 @@ function timing_test_impl(callback, desc) {
   var original_at = window.at;
   var original_executeAt = window.executeAt;
   var original_eventAt = window.eventAt;
+  var original_observeMutationsAt = window.observeMutationsAt;
   window.at = function(millis, propertyName, expectedValue,
                        polyfillAnimatedElement, nativeAnimatedElement) {
     expectationList.push({
@@ -209,14 +246,21 @@ function timing_test_impl(callback, desc) {
     }
     expectationList.push({
       millis: millis,
-      polyfillAnimationElement: polyfillAnimationElement,
-      eventType: eventType
+      eventType: eventType,
+      polyfillAnimationElement: polyfillAnimationElement
     });
   };
+  window.observeMutationsAt = function(millis) {
+    expectationList.push({
+      millis: millis,
+      observeMutations: true
+    });
+  }
   callback();
   window.at = original_at;
   window.executeAt = original_executeAt;
   window.eventAt = original_eventAt;
+  window.observeMutationsAt = original_observeMutationsAt;
 
   scheduleNext();
 }

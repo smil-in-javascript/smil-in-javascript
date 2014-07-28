@@ -30,10 +30,7 @@ function createTargets() {
 timing_test(function() {
   executeAt(1000, createTargets);
 
-  // Without this extra expectation (and RAF), the width
-  // is reported as 100. We need the DOM mutations to be
-  // observed before the RAF where we inspect width.
-  at(2000, 'height', '100', 'polyfillRect', 'nativeRect');
+  observeMutationsAt(2000);
 
   at(3000, 'width', '200', 'polyfillRect', 'nativeRect');
 }, 'append animation target');
