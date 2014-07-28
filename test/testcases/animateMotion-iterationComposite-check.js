@@ -24,13 +24,6 @@ timing_test(function() {
       ['translate(165, -220) rotate(0) translate(-75, 180) rotate(0)',
        undefined],
       polyfillRect, nativeRect);
-
-  // Without this extra expectation (and RAF), the final
-  // transform is mis-reported. We need the animation
-  // completion to be observed before the RAF where we
-  // inspect transform.
-  at(7000, 'width', 200, polyfillRect, nativeRect);
-
   at(8000, 'transform', ['', undefined], polyfillRect, nativeRect);
 
 }, 'animateTransform scale');
