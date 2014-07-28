@@ -89,6 +89,9 @@ function timing_test_impl(callback, desc) {
       scheduleNext();
       return;
     }
+    if (expectation.eventType) {
+      throw new Error('verifyExpectation call unexpected for event');
+    }
     var expectedValue = expectation.expectedValue;
 
     var polyfillAnimatedValue = readAttribute(
@@ -120,12 +123,46 @@ function timing_test_impl(callback, desc) {
     scheduleNext();
   }
 
+  function verifyEventExpectation(eventType, e) {
+    if (expectationIndex === expectationIndex.length) {
+      throw new Error('verifyEventExpectation call late and unexpected');
+    }
+    var expectation = expectationList[expectationIndex];
+    if (!expectation.eventType) {
+      throw new Error('verifyEventExpectation call unexpected');
+    }
+    var matched = true;
+
+    function assert(condition, message) {
+      if (!condition) {
+        console.log('Unexpected ' + message);
+        matched = false;
+      } else if (verbose) {
+        console.log('Matched ' + message);
+      }
+    }
+
+    assert(e.target === expectation.polyfillAnimationElement, 'event target');
+    assert(eventType === expectation.eventType, 'event type');
+    assert(e.view === document.defaultView, 'event view');
+    assert(e.detail.toString() === '0', 'event detail');
+
+    if (matched) {
+      ++numExpectationMatches;
+    }
+    scheduleNext();
+  }
+
   function scheduleNext() {
     ++expectationIndex;
     if (expectationIndex < expectationList.length) {
       var expectation = expectationList[expectationIndex];
       setTime(expectation.millis);
-      window.requestAnimationFrame(verifyExpectation);
+
+      if (!expectation.eventType) {
+        window.requestAnimationFrame(verifyExpectation);
+      }
+      // else we wait for an event instead of a RAF
     } else if (numExpectationMatches === expectationList.length) {
       console.log('PASSED: ' + desc);
     } else {
@@ -133,8 +170,15 @@ function timing_test_impl(callback, desc) {
     }
   }
 
+  function registerEventListener(polyfillAnimationElement, eventType) {
+    polyfillAnimationElement.addEventListener(eventType, function(e) {
+      verifyEventExpectation(eventType, e);
+    });
+  }
+
   var original_at = window.at;
   var original_executeAt = window.executeAt;
+  var original_eventAt = window.eventAt;
   window.at = function(millis, propertyName, expectedValue,
                        polyfillAnimatedElement, nativeAnimatedElement) {
     expectationList.push({
@@ -151,9 +195,28 @@ function timing_test_impl(callback, desc) {
       command: command
     });
   };
+  window.eventAt = function(millis, polyfillAnimationElement, eventType) {
+    // We register event listeners the first time we are passed a given
+    // polyfillAnimationElement.
+
+    if (!polyfillAnimationElement.harnessListenersAdded) {
+      registerEventListener(polyfillAnimationElement, 'begin');
+      registerEventListener(polyfillAnimationElement, 'end');
+
+      // Add JavaScript property to the polyfillAnimationElement,
+      // to record that we have registed event listeners.
+      polyfillAnimationElement.harnessListenersAdded = true;
+    }
+    expectationList.push({
+      millis: millis,
+      polyfillAnimationElement: polyfillAnimationElement,
+      eventType: eventType
+    });
+  };
   callback();
   window.at = original_at;
   window.executeAt = original_executeAt;
+  window.eventAt = original_eventAt;
 
   scheduleNext();
 }

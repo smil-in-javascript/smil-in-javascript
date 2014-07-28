@@ -651,10 +651,10 @@ AnimationRecord.prototype = {
           this.player.cancel();
           this.player = null;
         }
+
+        this.dispatchEvent('end', 0);
       }
       this.startTime = Infinity; // not playing
-
-      this.dispatchEvent('end', 0);
     }
 
     this.updateMainSchedule();
