@@ -129,7 +129,7 @@ var masterScheduler = {
   removeAnimationRecord: function(animationRecord) {
     this.scheduledAnimationRecords.remove(animationRecord);
   },
-  checkSchedule: function() {
+  processingPendingRecords: function() {
     var currentTime = document.timeline.currentTime;
     var animationRecord;
     while ((animationRecord =
@@ -141,7 +141,7 @@ var masterScheduler = {
 
 // FIXME: use a custom effect callback instead of polling
 window.requestAnimationFrame(function pollSchedule() {
-  masterScheduler.checkSchedule();
+  masterScheduler.processingPendingRecords();
   window.requestAnimationFrame(pollSchedule);
 });
 
@@ -270,256 +270,6 @@ function parseBeginEnd(isBegin, value) {
   return result;
 }
 
-function createTimingInput(animationRecord) {
-  var timingInput = {};
-
-  if (animationRecord.dur) {
-    timingInput.duration = parseClockValue(animationRecord.dur);
-  } else {
-    // Absent duration means infinite duration.
-    timingInput.duration = Infinity;
-  }
-
-  if (animationRecord.repeatCount) {
-    if (animationRecord.repeatCount === 'indefinite') {
-      timingInput.iterations = Infinity;
-    } else {
-      timingInput.iterations = parseFloat(animationRecord.repeatCount);
-    }
-  }
-
-  // http://www.w3.org/TR/smil/smil-timing.html#adef-fill
-  // http://www.w3.org/TR/smil/smil-timing.html#adef-fillDefault
-  if (animationRecord.fill === 'freeze' ||
-      animationRecord.fill === 'hold' ||
-      animationRecord.fill === 'transition' ||
-      (animationRecord.fill !== 'remove' &&
-       !animationRecord.dur &&
-       !animationRecord.end &&
-       !animationRecord.repeatCount &&
-       !animationRecord.repeatDir)) {
-    timingInput.fill = 'forwards';
-
-    // FIXME: support animationRecord.fill === 'fillDefault',
-    // where we must inspect the inherited fillDefault attribute.
-  }
-
-  if (animationRecord.calcMode === 'paced') {
-    timingInput.easing = 'paced';
-  }
-
-  return timingInput;
-}
-
-function createEffectOptions(animationRecord) {
-  var options = {};
-
-  // 'sum' adds to the underlying value of the attribute and other lower
-  // priority animations.
-  // http://www.w3.org/TR/smil/smil-animation.html#adef-additive
-  if (animationRecord.additive && animationRecord.additive === 'sum') {
-    // FIXME: use 'accumulate' when support is implemented in the
-    // Web Animations Polyfill.
-    options.composite = 'add';
-  } else {
-    // default behavior is options.composite = 'replace';
-  }
-
-  // http://www.w3.org/TR/smil/smil-animation.html#adef-accumulate
-  if (animationRecord.accumulate &&
-      animationRecord.accumulate === 'sum') {
-    options.iterationComposite = 'accumulate';
-  } else {
-    // default behavior is options.iterationComposite = 'replace';
-  }
-
-  // http://www.w3.org/TR/SVG/animate.html#AnimateMotionElement
-  if (animationRecord.rotate) {
-    if (animationRecord.rotate === 'auto') {
-      options.autoRotate = 'auto-rotate';
-    } else if (animationRecord.rotate === 'auto-reverse') {
-      options.autoRotate = 'auto-rotate';
-      options.angle = 180;
-    } else {
-      options.angle = parseFloat(animationRecord.rotate);
-    }
-  } else {
-    // default behavior is options.autoRotate = 'none';
-  }
-
-  return options;
-}
-
-function createAnimation(animationRecord) {
-  if (animationRecord.target) {
-    var animation = new Animation(animationRecord.target,
-                                  animationRecord.effect,
-                                  animationRecord.timingInput);
-    animationRecord.animation = animation;
-
-    if (isFinite(animationRecord.startTime)) {
-      // The animation started before the target existed
-      animationRecord.player =
-          document.timeline.play(animationRecord.animation);
-      animationRecord.player.startTime = animationRecord.startTime;
-    }
-  }
-}
-
-function createKeyframeAnimation(animationRecord) {
-
-  var attributeName = animationRecord.attributeName;
-  if (animationRecord.nodeName === 'animateTransform') {
-    attributeName = 'transform';
-  }
-
-  if (!attributeName) {
-    return;
-  }
-
-  var keyframes = null;
-  if ((animationRecord.nodeName === 'animate' ||
-       animationRecord.nodeName === 'animateTransform')) {
-    // FIXME: Support more ways of specifying keyframes, e.g. by, or only to.
-    // FIXME: Support ways of specifying timing function.
-
-    var processValue;
-    if (animationRecord.nodeName === 'animate') {
-      processValue = function(value) { return value; };
-    } else {
-      // animationRecord.nodeName === 'animateTransform'
-      var transformType;
-      if (animationRecord.type === 'scale' ||
-          animationRecord.type === 'rotate' ||
-          animationRecord.type === 'skewX' ||
-          animationRecord.type === 'skewY') {
-        transformType = animationRecord.type;
-      } else {
-        transformType = 'translate'; // default if type is not specified
-      }
-
-      processValue = function(value) {
-          return transformType + '(' + value + ')';
-      };
-    }
-
-    var keyTimeList = undefined;
-    if (animationRecord.keyTimes) {
-      keyTimeList = animationRecord.keyTimes.split(';');
-
-      var previousKeyTime = 0;
-      var validKeyTime = true;
-      for (var keyTimeIndex = 0;
-           validKeyTime && keyTimeIndex < keyTimeList.length;
-           ++keyTimeIndex) {
-        var currentKeyTime = parseFloat(keyTimeList[keyTimeIndex]);
-        keyTimeList[keyTimeIndex] = currentKeyTime;
-        validKeyTime =
-            currentKeyTime >= previousKeyTime &&
-            (keyTimeIndex !== 0 || currentKeyTime === 0) &&
-            currentKeyTime <= 1;
-
-        previousKeyTime = currentKeyTime;
-      }
-      if (!validKeyTime) {
-        keyTimeList = undefined;
-      }
-    }
-
-    if (animationRecord.values) {
-      var valueList = animationRecord.values.split(';');
-
-      // http://www.w3.org/TR/SVG/animate.html#KeyTimesAttribute
-      // For animations specified with a ‘values’ list, the ‘keyTimes’
-      // attribute if specified must have exactly as many values as there
-      // are in the ‘values’ attribute.
-      if (keyTimeList && keyTimeList.length !== valueList.length) {
-        keyTimeList = undefined;
-      }
-
-      keyframes = [];
-      for (var valueIndex = 0; valueIndex < valueList.length; ++valueIndex) {
-        var keyframe = {};
-        keyframe[attributeName] = processValue(valueList[valueIndex].trim());
-        if (keyTimeList) {
-          keyframe.offset = keyTimeList[valueIndex];
-        }
-        keyframes.push(keyframe);
-      }
-    } else if (animationRecord.from && animationRecord.to) {
-
-      // http://www.w3.org/TR/SVG/animate.html#KeyTimesAttribute
-      // For from/to/by animations, the ‘keyTimes’ attribute if specified
-      // must have two values.
-      if (keyTimeList && keyTimeList.length === 2) {
-        keyframes = [
-          {offset: keyTimeList[0]},
-          {offset: keyTimeList[1]}
-        ];
-      } else {
-        keyframes = [
-          {offset: 0},
-          {offset: 1}
-        ];
-      }
-
-      keyframes[0][attributeName] = processValue(animationRecord.from);
-      keyframes[1][attributeName] = processValue(animationRecord.to);
-    }
-  } else if (animationRecord.nodeName === 'set' && animationRecord.to) {
-    keyframes = [
-      {offset: 0},
-      {offset: 1}
-    ];
-    keyframes[0][attributeName] = animationRecord.to;
-    keyframes[1][attributeName] = animationRecord.to;
-  }
-
-  if (verbose) {
-    console.log('keyframes  = ' + JSON.stringify(keyframes));
-    console.log('options  = ' + JSON.stringify(animationRecord.options));
-    console.log('timingInput  = ' + JSON.stringify(
-        animationRecord.timingInput));
-  }
-
-  if (keyframes) {
-    animationRecord.keyframes = keyframes;
-    animationRecord.effect =
-        new KeyframeEffect(keyframes, animationRecord.options);
-    createAnimation(animationRecord);
-  }
-}
-
-function createMotionPathAnimation(animationRecord) {
-  var resolvedPath;
-  if (animationRecord.mpathRecord) {
-    var pathRef = animationRecord.mpathRecord['xlink:href'];
-    if (pathRef && pathRef.indexOf('#') === 0) {
-      animationRecord.pathNode = document.getElementById(pathRef.substring(1));
-      if (animationRecord.pathNode) {
-        resolvedPath = animationRecord.pathNode.getAttribute('d');
-      }
-    }
-  } else {
-    resolvedPath = animationRecord.path;
-  }
-
-  if (verbose) {
-    console.log('resolvedPath = ' + resolvedPath);
-    console.log('options  = ' + JSON.stringify(animationRecord.options));
-    console.log('timingInput  = ' + JSON.stringify(
-        animationRecord.timingInput));
-  }
-
-  if (resolvedPath) {
-    animationRecord.resolvedPath = resolvedPath;
-    animationRecord.effect =
-        new MotionPathEffect(resolvedPath, animationRecord.options);
-    createAnimation(animationRecord);
-  }
-}
-
-
 var animationRecordCounter = 0;
 
 /** @constructor */
@@ -567,8 +317,8 @@ var AnimationRecord = function(element) {
     this.target = element.parentNode;
   }
 
-  this.timingInput = createTimingInput(this);
-  this.options = createEffectOptions(this);
+  this.createTimingInput();
+  this.createEffectOptions();
 
   if (this.nodeName === 'mpath') {
     var parentRecord = animationRecords[element.parentNode.animationRecordId];
@@ -587,13 +337,262 @@ var AnimationRecord = function(element) {
     }
 
     if (this.nodeName !== 'animateMotion') {
-      createKeyframeAnimation(this);
+      this.createKeyframeAnimation();
     }
     // else we have animateMotion, and wait in case we have an mpath child
   }
 };
 
 AnimationRecord.prototype = {
+  createTimingInput: function() {
+    var timingInput = {};
+
+    if (this.dur) {
+      timingInput.duration = parseClockValue(this.dur);
+    } else {
+      // Absent duration means infinite duration.
+      timingInput.duration = Infinity;
+    }
+
+    if (this.repeatCount) {
+      if (this.repeatCount === 'indefinite') {
+        timingInput.iterations = Infinity;
+      } else {
+        timingInput.iterations = parseFloat(this.repeatCount);
+      }
+    }
+
+    // http://www.w3.org/TR/smil/smil-timing.html#adef-fill
+    // http://www.w3.org/TR/smil/smil-timing.html#adef-fillDefault
+    if (this.fill === 'freeze' ||
+        this.fill === 'hold' ||
+        this.fill === 'transition' ||
+        (this.fill !== 'remove' &&
+         !this.dur &&
+         !this.end &&
+         !this.repeatCount &&
+         !this.repeatDir)) {
+      timingInput.fill = 'forwards';
+
+      // FIXME: support this.fill === 'fillDefault',
+      // where we must inspect the inherited fillDefault attribute.
+    }
+
+    if (this.calcMode === 'paced') {
+      timingInput.easing = 'paced';
+    }
+
+    this.timingInput = timingInput;
+  },
+
+  createEffectOptions: function() {
+    var options = {};
+
+    // 'sum' adds to the underlying value of the attribute and other lower
+    // priority animations.
+    // http://www.w3.org/TR/smil/smil-animation.html#adef-additive
+    if (this.additive && this.additive === 'sum') {
+      // FIXME: use 'accumulate' when support is implemented in the
+      // Web Animations Polyfill.
+      options.composite = 'add';
+    } else {
+      // default behavior is options.composite = 'replace';
+    }
+
+    // http://www.w3.org/TR/smil/smil-animation.html#adef-accumulate
+    if (this.accumulate &&
+        this.accumulate === 'sum') {
+      options.iterationComposite = 'accumulate';
+    } else {
+      // default behavior is options.iterationComposite = 'replace';
+    }
+
+    // http://www.w3.org/TR/SVG/animate.html#AnimateMotionElement
+    if (this.rotate) {
+      if (this.rotate === 'auto') {
+        options.autoRotate = 'auto-rotate';
+      } else if (this.rotate === 'auto-reverse') {
+        options.autoRotate = 'auto-rotate';
+        options.angle = 180;
+      } else {
+        options.angle = parseFloat(this.rotate);
+      }
+    } else {
+      // default behavior is options.autoRotate = 'none';
+    }
+
+    this.options = options;
+  },
+
+  createAnimation: function() {
+    if (this.target) {
+      var animation = new Animation(this.target,
+                                    this.effect,
+                                    this.timingInput);
+      this.animation = animation;
+
+      if (isFinite(this.startTime)) {
+        // The animation started before the target existed
+        this.player =
+            document.timeline.play(this.animation);
+        this.player.startTime = this.startTime;
+      }
+    }
+  },
+
+  createKeyframeAnimation: function() {
+    var attributeName = this.attributeName;
+    if (this.nodeName === 'animateTransform') {
+      attributeName = 'transform';
+    }
+
+    if (!attributeName) {
+      return;
+    }
+
+    var keyframes = null;
+    if ((this.nodeName === 'animate' ||
+         this.nodeName === 'animateTransform')) {
+      // FIXME: Support more ways of specifying keyframes, e.g. by, or only to.
+      // FIXME: Support ways of specifying timing function.
+
+      var processValue;
+      if (this.nodeName === 'animate') {
+        processValue = function(value) { return value; };
+      } else {
+        // this.nodeName === 'animateTransform'
+        var transformType;
+        if (this.type === 'scale' ||
+            this.type === 'rotate' ||
+            this.type === 'skewX' ||
+            this.type === 'skewY') {
+          transformType = this.type;
+        } else {
+          transformType = 'translate'; // default if type is not specified
+        }
+
+        processValue = function(value) {
+            return transformType + '(' + value + ')';
+        };
+      }
+
+      var keyTimeList = undefined;
+      if (this.keyTimes) {
+        keyTimeList = this.keyTimes.split(';');
+
+        var previousKeyTime = 0;
+        var validKeyTime = true;
+        for (var keyTimeIndex = 0;
+             validKeyTime && keyTimeIndex < keyTimeList.length;
+             ++keyTimeIndex) {
+          var currentKeyTime = parseFloat(keyTimeList[keyTimeIndex]);
+          keyTimeList[keyTimeIndex] = currentKeyTime;
+          validKeyTime =
+              currentKeyTime >= previousKeyTime &&
+              (keyTimeIndex !== 0 || currentKeyTime === 0) &&
+              currentKeyTime <= 1;
+
+          previousKeyTime = currentKeyTime;
+        }
+        if (!validKeyTime) {
+          keyTimeList = undefined;
+        }
+      }
+
+      if (this.values) {
+        var valueList = this.values.split(';');
+
+        // http://www.w3.org/TR/SVG/animate.html#KeyTimesAttribute
+        // For animations specified with a ‘values’ list, the ‘keyTimes’
+        // attribute if specified must have exactly as many values as there
+        // are in the ‘values’ attribute.
+        if (keyTimeList && keyTimeList.length !== valueList.length) {
+          keyTimeList = undefined;
+        }
+
+        keyframes = [];
+        for (var valueIndex = 0; valueIndex < valueList.length; ++valueIndex) {
+          var keyframe = {};
+          keyframe[attributeName] = processValue(valueList[valueIndex].trim());
+          if (keyTimeList) {
+            keyframe.offset = keyTimeList[valueIndex];
+          }
+          keyframes.push(keyframe);
+        }
+      } else if (this.from && this.to) {
+
+        // http://www.w3.org/TR/SVG/animate.html#KeyTimesAttribute
+        // For from/to/by animations, the ‘keyTimes’ attribute if specified
+        // must have two values.
+        if (keyTimeList && keyTimeList.length === 2) {
+          keyframes = [
+            {offset: keyTimeList[0]},
+            {offset: keyTimeList[1]}
+          ];
+        } else {
+          keyframes = [
+            {offset: 0},
+            {offset: 1}
+          ];
+        }
+
+        keyframes[0][attributeName] = processValue(this.from);
+        keyframes[1][attributeName] = processValue(this.to);
+      }
+    } else if (this.nodeName === 'set' && this.to) {
+      keyframes = [
+        {offset: 0},
+        {offset: 1}
+      ];
+      keyframes[0][attributeName] = this.to;
+      keyframes[1][attributeName] = this.to;
+    }
+
+    if (verbose) {
+      console.log('keyframes  = ' + JSON.stringify(keyframes));
+      console.log('options  = ' + JSON.stringify(this.options));
+      console.log('timingInput  = ' + JSON.stringify(
+          this.timingInput));
+    }
+
+    if (keyframes) {
+      this.keyframes = keyframes;
+      this.effect =
+          new KeyframeEffect(keyframes, this.options);
+      this.createAnimation();
+    }
+  },
+
+  createMotionPathAnimation: function() {
+    var resolvedPath;
+    if (this.mpathRecord) {
+      var pathRef = this.mpathRecord['xlink:href'];
+      if (pathRef && pathRef.indexOf('#') === 0) {
+        this.pathNode =
+            document.getElementById(pathRef.substring(1));
+        if (this.pathNode) {
+          resolvedPath = this.pathNode.getAttribute('d');
+        }
+      }
+    } else {
+      resolvedPath = this.path;
+    }
+
+    if (verbose) {
+      console.log('resolvedPath = ' + resolvedPath);
+      console.log('options  = ' + JSON.stringify(this.options));
+      console.log('timingInput  = ' + JSON.stringify(
+          this.timingInput));
+    }
+
+    if (resolvedPath) {
+      this.resolvedPath = resolvedPath;
+      this.effect =
+          new MotionPathEffect(resolvedPath, this.options);
+      this.createAnimation();
+    }
+  },
+
   updateMainSchedule: function() {
     var earliest = Math.min(
         this.beginInstanceTimes.earliestScheduleTime(),
@@ -697,7 +696,7 @@ function walkSVG(node) {
   if (node.nodeName === 'animateMotion') {
     // If the node has an mpath child, it will have been processed in the
     // while loop above.
-    createMotionPathAnimation(animationRecords[node.animationRecordId]);
+    animationRecords[node.animationRecordId].createMotionPathAnimation();
   }
 
   if (!(node instanceof SVGElement)) {
@@ -711,7 +710,7 @@ function walkSVG(node) {
          waitingIndex < waitingList.length;
          ++waitingIndex) {
       waitingList[waitingIndex].target = node;
-      createAnimation(waitingList[waitingIndex]);
+      waitingList[waitingIndex].createAnimation();
     }
     delete waitingAnimationRecords[node.id];
   }
@@ -743,7 +742,7 @@ function processMutations(mutationRecords) {
     }
   }
   if (scheduleCheckRequired) {
-    masterScheduler.checkSchedule();
+    masterScheduler.processingPendingRecords();
   }
 }
 
@@ -765,7 +764,7 @@ function updateRecords() {
   for (var index = 0; index < svgFragmentList.length; ++index) {
     walkSVG(svgFragmentList[index]);
   }
-  masterScheduler.checkSchedule();
+  masterScheduler.processingPendingRecords();
 
   mutationObserver = new MutationObserver(processMutations);
   mutationObserver.observe(document, {
@@ -804,7 +803,7 @@ Object.defineProperty(SVGPolyfillAnimationElement.prototype, 'targetElement', {
 
 SVGPolyfillAnimationElement.prototype.getStartTime = function() {
     updateRecords();
-    masterScheduler.checkSchedule();
+    masterScheduler.processingPendingRecords();
     var animationRecord = animationRecords[this.animationRecordId];
     if (animationRecord) {
       // FIXME: if the 'current interval' is in the future, should return the
@@ -841,7 +840,7 @@ function instanceTimeRequest(node, methodName, offsetSeconds, isBegin) {
       var instanceTime = document.timeline.currentTime +
           secondsToMilliseconds(offsetSeconds);
       animationRecord.addInstanceTime(instanceTime, isBegin);
-      masterScheduler.checkSchedule();
+      masterScheduler.processingPendingRecords();
     } else {
       throw new Error(methodName + '() on unknown ' +
           node.nodeName + ' ' + node.id);
