@@ -40,7 +40,8 @@ function timing_test_impl(callback, desc) {
 
   function currentExpectation(requiredProperty) {
     if (expectationIndex === expectationList.length) {
-      throw new Error('Expectation ' + requiredProperty + ' late and unexpected');
+      throw new Error('Expectation ' + requiredProperty +
+          ' late and unexpected');
     }
     var expectation = expectationList[expectationIndex];
     if (!expectation.hasOwnProperty(requiredProperty)) {
@@ -159,7 +160,7 @@ function timing_test_impl(callback, desc) {
   function observeDummyMutation() {
     var dummyNode =
         document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    var mutationObserver = new MutationObserver(function () {
+    var mutationObserver = new MutationObserver(function() {
       var expectation = currentExpectation('observeMutations');
 
       mutationObserver.disconnect();
@@ -255,7 +256,7 @@ function timing_test_impl(callback, desc) {
       millis: millis,
       observeMutations: true
     });
-  }
+  };
   callback();
   window.at = original_at;
   window.executeAt = original_executeAt;
