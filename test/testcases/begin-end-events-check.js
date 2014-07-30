@@ -8,13 +8,13 @@ timing_test(function() {
     polyfillAnim.endElement();
   }
 
-  executeAt(500, requentEnd); // NOOP
-  eventAt(1000, polyfillAnim, 'begin');
-  eventAt(2000, polyfillAnim, 'end');
-  eventAt(3000, polyfillAnim, 'begin');
-  eventAt(4000, polyfillAnim, 'end');
-  eventAt(4000, polyfillAnim, 'begin');
-  eventAt(5000, polyfillAnim, 'end');
-  executeAt(5500, requentEnd); // NOOP
+  executeAt(32000, requentEnd); // NOOP
+  eventAt(36000, polyfillAnim, 'begin');
+  eventAt(40000, polyfillAnim, 'end');
+  eventAt(44000, polyfillAnim, 'begin');
+  eventAt(48000, polyfillAnim, 'end');
+  eventAt(48000, polyfillAnim, 'begin');
+  eventAt(52000, polyfillAnim, 'end');
+  executeAt(60000, requentEnd); // NOOP
 
 }, 'begin and end events');
