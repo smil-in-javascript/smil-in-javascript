@@ -67,8 +67,17 @@ var waitingAnimationRecords = {};
 
 /** @constructor */
 var PriorityQueue = function() {
-  // FIXME: use a heap or tree for efficiency
-  this.entries = [];
+  // Each entry in the priority queue has a 'scheduleTime' property.
+
+  // We implement the priority queue using a heap.
+  // heap[0] is unused
+  // heap[1] has the earliest scheduleTime
+  // The children of heap[i] are heap[2 * i] and heap[2 * i + 1]
+  // The parent of heap[i] is heap[(i - i % 2) / 2]
+  this.heap = [null];
+
+  // We store in each entry a 'heapIndex' property, so we can efficiently
+  // remove any entry from the queue.
 };
 
 PriorityQueue.prototype = {
@@ -76,47 +85,78 @@ PriorityQueue.prototype = {
     if (!isFinite(newEntry.scheduleTime)) {
       throw new Error('newEntry.scheduleTime is not finite');
     }
-    var entries = this.entries;
-    var index = entries.length;
-    entries.push(null);
-    // loop invariant: entries[index] is available
-    while (index &&
-           entries[index - 1].scheduleTime > newEntry.scheduleTime) {
-      entries[index] = entries[index - 1];
-      --index;
-    }
-    entries[index] = newEntry;
+    var index = this.heap.length;
+    this.heap.push(null);
+    this.shiftUp(index, newEntry);
   },
-  // existingEntry must currently be in the queue
   remove: function(existingEntry) {
-    var entries = this.entries;
-    var index = 0;
-
-    // could binary search
-    while (index < entries.length &&
-           entries[index] != existingEntry) {
-      ++index;
+    var index = existingEntry.heapIndex;
+    existingEntry.heapIndex = null;
+    var lastEntry = this.heap.pop();
+    if (lastEntry === existingEntry)
+      return;
+    if (index === 1) {
+      this.shiftDown(index, lastEntry);
+      return;
     }
-
-    if (index == entries.length) {
-      throw new Error('existingEntry is not in entries');
+    var parentIndex = (index - index % 2) / 2;
+    if (this.heap[parentIndex].scheduleTime <
+        lastEntry.scheduleTime) {
+      this.shiftDown(index, lastEntry);
+    } else {
+      this.shiftUp(index, lastEntry);
     }
-    entries.splice(index, 1);
+  },
+  shiftUp: function(index, entry) {
+    while (index != 1) {
+      var parentIndex = (index - index % 2) / 2;
+      if (this.heap[parentIndex].scheduleTime <=
+          entry.scheduleTime) {
+        break;
+      }
+      this.heap[index] = this.heap[parentIndex];
+      this.heap[index].heapIndex = index;
+      index = parentIndex;
+    }
+    this.heap[index] = entry;
+    this.heap[index].heapIndex = index;
+  },
+  shiftDown: function(index, entry) {
+    while (2 * index < this.heap.length) {
+      var childIndex = 2 * index;
+
+      if (childIndex + 1 < this.heap.length &&
+          (this.heap[childIndex + 1].scheduleTime <
+           this.heap[childIndex].scheduleTime)) {
+        ++childIndex;
+      }
+
+      if (entry.scheduleTime <=
+          this.heap[childIndex].scheduleTime) {
+        break;
+      }
+      this.heap[index] = this.heap[childIndex];
+      this.heap[index].heapIndex = index;
+      index = childIndex;
+    }
+    this.heap[index] = entry;
+    this.heap[index].heapIndex = index;
   },
   earliestScheduleTime: function() {
-    var entries = this.entries;
-    if (!entries.length) {
+    if (this.heap.length === 1) {
       return Infinity;
     }
-    return entries[0].scheduleTime;
+    return this.heap[1].scheduleTime;
   },
   // returns null if no entry has scheduleTime <= currentTime
   extractFirst: function(currentTime) {
-    var entries = this.entries;
-    if (!entries.length || currentTime < entries[0].scheduleTime) {
+    if (this.heap.length === 1 ||
+        currentTime < this.heap[1].scheduleTime) {
       return null;
     }
-    return entries.shift();
+    var first = this.heap[1];
+    this.remove(first);
+    return first;
   }
 };
 
@@ -787,52 +827,6 @@ function secondsToMilliseconds(seconds) {
   return seconds * 1000;
 }
 
-Object.defineProperty(SVGPolyfillAnimationElement.prototype, 'targetElement', {
-  enumerable: true,
-  get: function() {
-    updateRecords();
-    var animationRecord = animationRecords[this.animationRecordId];
-    if (animationRecord) {
-      return animationRecord.target;
-    } else {
-      throw new Error('targetElement get on unknown ' +
-          this.nodeName + ' ' + this.id);
-    }
-  }
-});
-
-SVGPolyfillAnimationElement.prototype.getStartTime = function() {
-    updateRecords();
-    masterScheduler.processingPendingRecords();
-    var animationRecord = animationRecords[this.animationRecordId];
-    if (animationRecord) {
-      // FIXME: if the 'current interval' is in the future, should return the
-      // begin time for that interval. If there is no current interval, should
-      // throw INVALID_STATE_ERR DOMException
-      // For now, we assume an animation is in progress.
-      return millisecondsToSeconds(animationRecord.startTime);
-    } else {
-      throw new Error('getStartTime() on unknown ' +
-          this.nodeName + ' ' + this.id);
-    }
-};
-
-SVGPolyfillAnimationElement.prototype.getCurrentTime = function() {
-    updateRecords();
-    return millisecondsToSeconds(document.timeline.currentTime);
-};
-
-SVGPolyfillAnimationElement.prototype.getSimpleDuration = function() {
-    updateRecords();
-    var animationRecord = animationRecords[this.animationRecordId];
-    if (animationRecord) {
-      return millisecondsToSeconds(animationRecord.timingInput.duration);
-    } else {
-      throw new Error('getSimpleDuration() on unknown ' +
-          this.nodeName + ' ' + this.id);
-    }
-};
-
 function instanceTimeRequest(node, methodName, offsetSeconds, isBegin) {
     updateRecords();
     var animationRecord = animationRecords[node.animationRecordId];
@@ -847,24 +841,77 @@ function instanceTimeRequest(node, methodName, offsetSeconds, isBegin) {
     }
 }
 
-SVGPolyfillAnimationElement.prototype.beginElement = function() {
-  instanceTimeRequest(
-      this, 'beginElement', 0, true);
-};
+if (window['SVGPolyfillAnimationElement']) {
+  Object.defineProperty(SVGPolyfillAnimationElement.prototype,
+                        'targetElement', {
+    enumerable: true,
+    get: function() {
+      updateRecords();
+      var animationRecord = animationRecords[this.animationRecordId];
+      if (animationRecord) {
+        return animationRecord.target;
+      } else {
+        throw new Error('targetElement get on unknown ' +
+            this.nodeName + ' ' + this.id);
+      }
+    }
+  });
 
-SVGPolyfillAnimationElement.prototype.beginElementAt = function(offset) {
-  instanceTimeRequest(
-      this, 'beginElementAt', offset, true);
-};
+  SVGPolyfillAnimationElement.prototype.getStartTime = function() {
+      updateRecords();
+      masterScheduler.processingPendingRecords();
+      var animationRecord = animationRecords[this.animationRecordId];
+      if (animationRecord) {
+        // FIXME: if the 'current interval' is in the future, should return the
+        // begin time for that interval. If there is no current interval, should
+        // throw INVALID_STATE_ERR DOMException
+        // For now, we assume an animation is in progress.
+        return millisecondsToSeconds(animationRecord.startTime);
+      } else {
+        throw new Error('getStartTime() on unknown ' +
+            this.nodeName + ' ' + this.id);
+      }
+  };
 
-SVGPolyfillAnimationElement.prototype.endElement = function() {
-  instanceTimeRequest(
-      this, 'endElement', 0, false);
-};
+  SVGPolyfillAnimationElement.prototype.getCurrentTime = function() {
+      updateRecords();
+      return millisecondsToSeconds(document.timeline.currentTime);
+  };
 
-SVGPolyfillAnimationElement.prototype.endElementAt = function(offset) {
-  instanceTimeRequest(
-      this, 'endElementAt', offset, false);
+  SVGPolyfillAnimationElement.prototype.getSimpleDuration = function() {
+      updateRecords();
+      var animationRecord = animationRecords[this.animationRecordId];
+      if (animationRecord) {
+        return millisecondsToSeconds(animationRecord.timingInput.duration);
+      } else {
+        throw new Error('getSimpleDuration() on unknown ' +
+            this.nodeName + ' ' + this.id);
+      }
+  };
+
+  SVGPolyfillAnimationElement.prototype.beginElement = function() {
+    instanceTimeRequest(
+        this, 'beginElement', 0, true);
+  };
+
+  SVGPolyfillAnimationElement.prototype.beginElementAt = function(offset) {
+    instanceTimeRequest(
+        this, 'beginElementAt', offset, true);
+  };
+
+  SVGPolyfillAnimationElement.prototype.endElement = function() {
+    instanceTimeRequest(
+        this, 'endElement', 0, false);
+  };
+
+  SVGPolyfillAnimationElement.prototype.endElementAt = function(offset) {
+    instanceTimeRequest(
+        this, 'endElementAt', offset, false);
+  };
+}
+
+window._SmilInJavascriptTestingUtilities = {
+  _priorityQueue: PriorityQueue
 };
 
 })();
