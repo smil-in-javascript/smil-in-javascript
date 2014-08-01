@@ -15,5 +15,5 @@ fi
 # Comment out the (function() {} ) wrapper
 sed -e'17s-^-//-' -e'$s-^-//-' smil-in-javascript.js > smil-in-javascript-4lint.js
 
-gjslint --summary --nojsdoc smil-in-javascript-4lint.js test/harness.js test/testcases/*.js && rm smil-in-javascript-4lint.js
+gjslint --summary --nojsdoc smil-in-javascript-4lint.js test/harness.js test/testcases/*.js test/unit-tests/*.js && rm smil-in-javascript-4lint.js
 exit $?

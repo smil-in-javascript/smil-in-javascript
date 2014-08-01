@@ -16,6 +16,18 @@
 
 'use strict';
 
+function assertLess(a, b) {
+  // We use ! < instead of >= so that tests using undefined fail
+  if (!(a < b)) {
+    throw ('assertLess failed: ' + a + ' >= ' + b);
+  }
+}
+function assertEqual(a, b) {
+  if (a !== b) {
+    throw ('assertEqual failed: ' + a + ' !== ' + b);
+  }
+}
+
 function timing_test_impl(callback, desc) {
   console.log('RUNNING: ' + desc);
   var svgFragmentList = document.querySelectorAll('svg');
