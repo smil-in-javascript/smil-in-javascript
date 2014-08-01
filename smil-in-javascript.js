@@ -925,6 +925,10 @@ if (window['SVGPolyfillAnimationElement']) {
 }
 
 window._SmilInJavascriptTestingUtilities = {
+  _parseClockValue: parseClockValue,
+  _parseOffsetValue: parseOffsetValue,
+  _parseBeginEndValue: parseBeginEndValue,
+  _parseBeginEnd: parseBeginEnd,
   _priorityQueue: PriorityQueue
 };
 
