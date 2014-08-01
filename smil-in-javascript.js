@@ -659,11 +659,20 @@ AnimationRecord.prototype = {
     this.updateMainSchedule();
   },
   processNow: function() {
-    // this element is no longer in the main schedule
-    this.scheduleTime = Infinity;
+
+    if (this.scheduleTime > document.timeline.currentTime) {
+      throw new Error('Scheduled too early');
+    }
 
     if (this.beginInstanceTimes.earliestScheduleTime() <=
         this.endInstanceTimes.earliestScheduleTime()) {
+
+      var scheduleTime = this.beginInstanceTimes.extractFirst().scheduleTime;
+      if (this.scheduleTime !== scheduleTime) {
+        throw new Error('Inconsistent schedule');
+      }
+      // this element is no longer in the main schedule
+      this.scheduleTime = Infinity;
 
       // Start time is finite if we are currently playing
       if (this.startTime !== Infinity) {
@@ -674,7 +683,6 @@ AnimationRecord.prototype = {
         this.dispatchEvent('end', 0);
       }
 
-      var scheduleTime = this.beginInstanceTimes.extractFirst().scheduleTime;
       this.startTime = scheduleTime; // used if target is created later
       if (this.animation) {
         this.player = document.timeline.play(this.animation);
@@ -686,6 +694,12 @@ AnimationRecord.prototype = {
     } else {
 
       var scheduleTime = this.endInstanceTimes.extractFirst().scheduleTime;
+      if (this.scheduleTime !== scheduleTime) {
+        throw new Error('Inconsistent schedule');
+      }
+      // this element is no longer in the main schedule
+      this.scheduleTime = Infinity;
+
       if (this.startTime !== Infinity && this.player) {
         if (this.fill === 'freeze') {
           this.player.pause();
