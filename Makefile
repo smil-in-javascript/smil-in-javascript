@@ -10,3 +10,9 @@ lint: smil-in-javascript.js test/harness.js test/testcases/*.js test/unit-tests/
 
 unit-test:
 	karma start --single-run
+
+layout-test:
+	touch test/testcases.js
+	-test/update-testcases.py
+	${CHROME_BIN} test/test-runner.html
+
