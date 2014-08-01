@@ -60,6 +60,12 @@ module.exports = function(config) {
     browsers: ['Chrome'],
 
 
+    plugins : [
+      'karma-chrome-launcher',
+      'karma-mocha'
+    ],
+
+
     // Continuous Integration mode
     // if true, Karma captures browsers, runs the tests and exits
     singleRun: false
