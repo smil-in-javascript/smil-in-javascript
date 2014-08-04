@@ -3585,6 +3585,9 @@ var extractValues = function(values, numValues, hasOptionalValue,
   if (hasOptionalValue && values[1 + 2 * numValues]) {
     result.push(extractValue(values, 1 + 2 * numValues, hasUnits));
   }
+  if (hasOptionalValue === 2 && values[3 + 2 * numValues]) {
+    result.push(extractValue(values, 3 + 2 * numValues, hasUnits));
+  }
   return result;
 };
 
@@ -3611,7 +3614,10 @@ function transformRE(name, numParms, hasOptionalParm) {
     tokenList.push(COMMA);
   }
   tokenList.push(UNIT_NUMBER);
-  if (hasOptionalParm) {
+  if (hasOptionalParm === 2) {
+    tokenList.push(optional([SPACES, UNIT_NUMBER].join('')));
+    tokenList.push(optional([SPACES, UNIT_NUMBER].join('')));
+  } else if (hasOptionalParm) {
     tokenList.push(optional([COMMA, UNIT_NUMBER].join('')));
   }
   tokenList.push(CLOSE_BRACKET);
@@ -3689,7 +3695,7 @@ function build3DRotationMatcher() {
 }
 
 var transformREs = [
-  buildRotationMatcher('rotate', 1, false),
+  buildRotationMatcher('rotate', 1, 2),
   buildRotationMatcher('rotateX', 1, false),
   buildRotationMatcher('rotateY', 1, false),
   buildRotationMatcher('rotateZ', 1, false),
