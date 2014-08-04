@@ -482,9 +482,6 @@ AnimationRecord.prototype = {
 
   createKeyframeAnimation: function() {
     var attributeName = this.attributeName;
-    if (this.nodeName === 'animateTransform') {
-      attributeName = 'transform';
-    }
 
     if (!attributeName) {
       return;
