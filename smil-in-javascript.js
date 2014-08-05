@@ -64,6 +64,9 @@ var animationRecords = {};
 // Animations waiting for their target element to be created
 var waitingAnimationRecords = {};
 
+// map from accessKey to TimeValueSpecification list
+// null if there are not yet any elements waiting for an accessKey
+var accessKeyTimeValueSpecs = null;
 
 /** @constructor */
 var PriorityQueue = function() {
@@ -267,13 +270,21 @@ function parseBeginEndValue(value) {
       token = value;
       offset = 0;
     } else {
-      token = value.substring(0, offsetIndex);
+      token = value.substring(0, offsetIndex).trim();
       offset = parseOffsetValue(value.substring(offsetIndex));
     }
     var separatorIndex = token.indexOf('.');
     if (separatorIndex === -1) {
-      // FIXME: support event values
-      return undefined;
+      if (token.indexOf('accessKey(') === 0 &&
+          token[token.length - 1] === ')') {
+        return {
+          accessKey: token['accessKey('.length].charCodeAt(),
+          offset: offset
+        };
+      } else {
+        // FIXME: support other event values
+        return undefined;
+      }
     }
     var timeSymbol = token.substring(separatorIndex + 1);
     if (timeSymbol !== 'begin' && timeSymbol !== 'end') {
@@ -366,15 +377,8 @@ var AnimationRecord = function(element) {
       parentRecord.mpathRecord = this;
     }
   } else {
-    var beginTimes = parseBeginEnd(true, this['begin']);
-    for (var index = 0; index < beginTimes.length; ++index) {
-      this.addInstanceTime(beginTimes[index], true);
-    }
-
-    var endTimes = parseBeginEnd(false, this['end']);
-    for (var index = 0; index < endTimes.length; ++index) {
-      this.addInstanceTime(endTimes[index], false);
-    }
+    this.processBeginEndSpec(true, this['begin']);
+    this.processBeginEndSpec(false, this['end']);
 
     if (this.nodeName !== 'animateMotion') {
       this.createKeyframeAnimation();
@@ -630,6 +634,32 @@ AnimationRecord.prototype = {
     }
   },
 
+  processBeginEndSpec: function(isBegin, value) {
+    var specs = parseBeginEnd(isBegin, value);
+    for (var index = 0; index < specs.length; ++index) {
+      var spec = specs[index];
+      if (typeof spec === 'number') {
+        this.addInstanceTime(spec, isBegin);
+      } else {
+        spec.owner = this;
+        spec.isBegin = isBegin;
+
+        // FIXME: support more spec types than only accessKey
+
+        if (!accessKeyTimeValueSpecs) {
+          // We were not yet listening for keypress
+          accessKeyTimeValueSpecs = {};
+          document.body.addEventListener('keypress', processKeystroke);
+        }
+        if (!accessKeyTimeValueSpecs[spec.accessKey]) {
+          // We were not yet listening for spec.accessKey
+          accessKeyTimeValueSpecs[spec.accessKey] = [];
+        }
+        accessKeyTimeValueSpecs[spec.accessKey].push(spec);
+      }
+    }
+  },
+
   updateMainSchedule: function() {
     var earliest = Math.min(
         this.beginInstanceTimes.earliestScheduleTime(),
@@ -829,6 +859,17 @@ function updateRecords() {
 }
 
 window.addEventListener('load', updateRecords);
+
+function processKeystroke(event) {
+  var specs = accessKeyTimeValueSpecs[event.charCode];
+  if (specs) {
+    var currentTime = document.timeline.currentTime;
+    for (var index = 0; index < specs.length; ++index) {
+      var spec = specs[index];
+      spec.owner.addInstanceTime(currentTime + spec.offset, spec.isBegin);
+    }
+  }
+}
 
 function millisecondsToSeconds(milliseconds) {
   return milliseconds / 1000;

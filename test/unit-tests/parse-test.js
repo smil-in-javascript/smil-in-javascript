@@ -23,7 +23,9 @@ function matchBeginEnd(isBegin, valueStr, expectedValues) {
       isBegin, valueStr);
   assertEqual(parseResult.length, expectedValues.length);
   for (var index = 0; index < expectedValues.length; ++ index) {
-    assertEqual(parseResult[index], expectedValues[index]);
+    assertEqual(
+        JSON.stringify(parseResult[index]),
+        JSON.stringify(expectedValues[index]));
   }
 }
 
@@ -97,6 +99,14 @@ describe('parse', function() {
     it('should accept multiple values', function() {
       matchBeginEnd(true, '1ms;2ms;3ms', [1, 2, 3]);
       matchBeginEnd(false, '4ms;-5ms', [4, -5]);
+    });
+    it('should accept accessKey', function() {
+      matchBeginEnd(true, 'accessKey(1)',
+          [{accessKey: '1'.charCodeAt(), offset: 0}]);
+      matchBeginEnd(true, 'accessKey(2) + 12ms',
+          [{accessKey: '2'.charCodeAt(), offset: 12}]);
+      matchBeginEnd(false, 'accessKey(3)-9',
+          [{accessKey: '3'.charCodeAt(), offset: -9000}]);
     });
   });
 });
