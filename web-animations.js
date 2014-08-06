@@ -3576,19 +3576,24 @@ var extractValue = function(values, pos, hasUnits) {
   return result;
 };
 
-var extractValues = function(values, numValues, hasOptionalValue,
+var extractValues = function(values, numValues, numOptionalValues,
     hasUnits) {
   var result = [];
+  var pos = 1; // values has the matched text as the first item
+
   for (var i = 0; i < numValues; i++) {
-    result.push(extractValue(values, 1 + 2 * i, hasUnits));
+    result.push(extractValue(values, pos, hasUnits));
+    pos += 2; // move past number and units
   }
-  if (hasOptionalValue && values[1 + 2 * numValues]) {
-    result.push(extractValue(values, 1 + 2 * numValues, hasUnits));
+  for (var i = 0; i < numOptionalValues && values[pos]; i++) {
+    result.push(extractValue(values, pos, hasUnits));
+    pos += 2; // move past number and units
   }
   return result;
 };
 
 var SPACES = '\\s*';
+var MANDATORY_SPACES = '\\s+';
 var NUMBER = '[+-]?(?:\\d+|\\d*\\.\\d+)';
 var RAW_OPEN_BRACKET = '\\(';
 var RAW_CLOSE_BRACKET = '\\)';
@@ -3604,22 +3609,23 @@ var CLOSE_BRACKET = [SPACES, RAW_CLOSE_BRACKET, SPACES].join('');
 var COMMA = [SPACES, RAW_COMMA, SPACES].join('');
 var UNIT_NUMBER = [capture(NUMBER), capture(UNIT)].join('');
 
-function transformRE(name, numParms, hasOptionalParm) {
+function transformRE(name, numParms, numOptionalParms, commaDelimited) {
   var tokenList = [START, SPACES, name, OPEN_BRACKET];
+  var separator = commaDelimited ? COMMA : MANDATORY_SPACES;
   for (var i = 0; i < numParms - 1; i++) {
     tokenList.push(UNIT_NUMBER);
-    tokenList.push(COMMA);
+    tokenList.push(separator);
   }
   tokenList.push(UNIT_NUMBER);
-  if (hasOptionalParm) {
-    tokenList.push(optional([COMMA, UNIT_NUMBER].join('')));
+  for (var i = 0; i < numOptionalParms; i++) {
+    tokenList.push(optional([separator, UNIT_NUMBER].join('')));
   }
   tokenList.push(CLOSE_BRACKET);
   return new RegExp(tokenList.join(''));
 }
 
-function buildMatcher(name, numValues, hasOptionalValue, hasUnits,
-    baseValue) {
+function buildMatcher(name, numValues, numOptionalValues, commaDelimited,
+    hasUnits, baseValue) {
   var baseName = name;
   if (baseValue) {
     if (name[name.length - 1] === 'X' || name[name.length - 1] === 'Y') {
@@ -3630,7 +3636,7 @@ function buildMatcher(name, numValues, hasOptionalValue, hasUnits,
   }
 
   var f = function(x) {
-    var r = extractValues(x, numValues, hasOptionalValue, hasUnits);
+    var r = extractValues(x, numValues, numOptionalValues, hasUnits);
     if (baseValue !== undefined) {
       if (name[name.length - 1] === 'X') {
         r.push(baseValue);
@@ -3638,7 +3644,7 @@ function buildMatcher(name, numValues, hasOptionalValue, hasUnits,
         r = [baseValue].concat(r);
       } else if (name[name.length - 1] === 'Z') {
         r = [baseValue, baseValue].concat(r);
-      } else if (hasOptionalValue) {
+      } else if (numOptionalValues >= 1) {
         while (r.length < 2) {
           if (baseValue === 'copy') {
             r.push(r[0]);
@@ -3650,12 +3656,18 @@ function buildMatcher(name, numValues, hasOptionalValue, hasUnits,
     }
     return r;
   };
-  return [transformRE(name, numValues, hasOptionalValue), f, baseName];
+  return [transformRE(name, numValues, numOptionalValues, commaDelimited),
+      f, baseName];
 }
 
-function buildRotationMatcher(name, numValues, hasOptionalValue,
-    baseValue) {
-  var m = buildMatcher(name, numValues, hasOptionalValue, true, baseValue);
+function buildSingleValueMatcher(name, hasUnits, baseValue) {
+  return buildMatcher(name, 1, 0, true, hasUnits, baseValue);
+}
+
+function buildRotationMatcher(name, numValues, numOptionalValues,
+    commaDelimited, baseValue) {
+  var m = buildMatcher(name, numValues, numOptionalValues, commaDelimited,
+      true, baseValue);
 
   var f = function(x) {
     var r = m[1](x);
@@ -3671,7 +3683,7 @@ function buildRotationMatcher(name, numValues, hasOptionalValue,
 }
 
 function build3DRotationMatcher() {
-  var m = buildMatcher('rotate3d', 4, false, true);
+  var m = buildMatcher('rotate3d', 4, 0, true, true);
   var f = function(x) {
     var r = m[1](x);
     var out = [];
@@ -3689,27 +3701,27 @@ function build3DRotationMatcher() {
 }
 
 var transformREs = [
-  buildRotationMatcher('rotate', 1, false),
-  buildRotationMatcher('rotateX', 1, false),
-  buildRotationMatcher('rotateY', 1, false),
-  buildRotationMatcher('rotateZ', 1, false),
+  buildRotationMatcher('rotate', 1, 2, false),
+  buildRotationMatcher('rotateX', 1, 0, true),
+  buildRotationMatcher('rotateY', 1, 0, true),
+  buildRotationMatcher('rotateZ', 1, 0, true),
   build3DRotationMatcher(),
-  buildRotationMatcher('skew', 1, true, 0),
-  buildRotationMatcher('skewX', 1, false),
-  buildRotationMatcher('skewY', 1, false),
-  buildMatcher('translateX', 1, false, true, {px: 0}),
-  buildMatcher('translateY', 1, false, true, {px: 0}),
-  buildMatcher('translateZ', 1, false, true, {px: 0}),
-  buildMatcher('translate', 1, true, true, {px: 0}),
-  buildMatcher('translate3d', 3, false, true),
-  buildMatcher('scale', 1, true, false, 'copy'),
-  buildMatcher('scaleX', 1, false, false, 1),
-  buildMatcher('scaleY', 1, false, false, 1),
-  buildMatcher('scaleZ', 1, false, false, 1),
-  buildMatcher('scale3d', 3, false, false),
-  buildMatcher('perspective', 1, false, true),
-  buildMatcher('matrix', 6, false, false),
-  buildMatcher('matrix3d', 16, false, false)
+  buildRotationMatcher('skew', 1, 1, true, 0),
+  buildRotationMatcher('skewX', 1, 0, true),
+  buildRotationMatcher('skewY', 1, 0, true),
+  buildSingleValueMatcher('translateX', true, {px: 0}),
+  buildSingleValueMatcher('translateY', true, {px: 0}),
+  buildSingleValueMatcher('translateZ', true, {px: 0}),
+  buildMatcher('translate', 1, 1, true, true, {px: 0}),
+  buildMatcher('translate3d', 3, 0, true, true),
+  buildMatcher('scale', 1, 1, true, false, 'copy'),
+  buildSingleValueMatcher('scaleX', false, 1),
+  buildSingleValueMatcher('scaleY', false, 1),
+  buildSingleValueMatcher('scaleZ', false, 1),
+  buildMatcher('scale3d', 3, 0, true, false),
+  buildSingleValueMatcher('perspective', true),
+  buildMatcher('matrix', 6, 0, true, false),
+  buildMatcher('matrix3d', 16, 0, true, false)
 ];
 
 var decomposeMatrix = (function() {

@@ -45,13 +45,13 @@ timing_test(function() {
   at(9500, 'transform',
      'rotate(30)', polyfillRect, nativeRect);
 
-  // FIXME: polyfill should support rotate with <rotate-angle> <cx> <cy>
+  // FIXME: polyfill should output with no commas: <rotate-angle> <cx> <cy>
   at(10500, 'transform',
-     ['', 'rotate(30 100 50)'], polyfillRect, nativeRect);
+     ['rotate(30,100,50)', 'rotate(30 100 50)'], polyfillRect, nativeRect);
   at(11000, 'transform',
-     ['', 'rotate(20 200 100)'], polyfillRect, nativeRect);
+     ['rotate(20,200,100)', 'rotate(20 200 100)'], polyfillRect, nativeRect);
   at(11500, 'transform',
-     ['', 'rotate(10 300 150)'], polyfillRect, nativeRect);
+     ['rotate(10,300,150)', 'rotate(10 300 150)'], polyfillRect, nativeRect);
 
   at(12000, 'transform',
     'skewX(0)', polyfillRect, nativeRect);
