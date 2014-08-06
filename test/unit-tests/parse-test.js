@@ -108,5 +108,15 @@ describe('parse', function() {
       matchBeginEnd(false, 'accessKey(3)-9',
           [{accessKey: '3'.charCodeAt(), offset: -9000}]);
     });
+    it('should accept click', function() {
+      matchBeginEnd(true, 'foo.click',
+          [{id: 'foo', eventKind: 'click', offset: 0}]);
+    });
+    it('should accept begin end', function() {
+      matchBeginEnd(true, 'bar.begin+3s',
+          [{id: 'bar', timeSymbol: 'begin', offset: 3000}]);
+      matchBeginEnd(true, 'baz.end-4ms',
+          [{id: 'baz', timeSymbol: 'end', offset: -4}]);
+    });
   });
 });
