@@ -3,7 +3,7 @@
 function issueKeystroke(charCode) {
   var event = new Event('keypress');
   event.charCode = charCode;
-  document.body.dispatchEvent(event);
+  document.documentElement.dispatchEvent(event);
 }
 
 function issueKeystrokes() {

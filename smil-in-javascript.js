@@ -649,7 +649,7 @@ AnimationRecord.prototype = {
         if (!accessKeyTimeValueSpecs) {
           // We were not yet listening for keypress
           accessKeyTimeValueSpecs = {};
-          document.body.addEventListener('keypress', processKeystroke);
+          document.documentElement.addEventListener('keypress', processKeystroke);
         }
         if (!accessKeyTimeValueSpecs[spec.accessKey]) {
           // We were not yet listening for spec.accessKey
