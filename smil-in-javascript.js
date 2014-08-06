@@ -415,6 +415,24 @@ AnimationRecord.prototype = {
       } else {
         timingInput.iterations = parseFloat(this.repeatCount);
       }
+
+      this.repeatDuration = timingInput.duration * timingInput.iterations;
+    } else {
+      this.repeatDuration = timingInput.duration;
+    }
+
+    if (this.repeatDur) {
+      if (this.repeatCount) {
+        this.repeatDuration = Math.min(
+            this.repeatDuration,
+            parseClockValue(this.repeatDur));
+      } else {
+        this.repeatDuration = parseClockValue(this.repeatDur);
+      }
+
+      if (timingInput.duration !== 0) {
+        timingInput.iterations = this.repeatDuration / timingInput.duration;
+      }
     }
 
     // http://www.w3.org/TR/smil/smil-timing.html#adef-fill
@@ -438,6 +456,31 @@ AnimationRecord.prototype = {
     }
 
     this.timingInput = timingInput;
+
+    if (this.min) {
+      this.minActiveDuration = parseClockValue(this.min);
+    } else {
+      this.minActiveDuration = 0;
+    }
+
+    if (this.max) {
+      this.maxActiveDuration = parseClockValue(this.max);
+    } else {
+      this.maxActiveDuration = Infinity;
+    }
+
+    if (this.maxActiveDuration < this.minActiveDuration) {
+      // http://www.w3.org/TR/SMIL3/smil-timing.html#Timing-MinMax
+      // If !(max >= min) then both attributes are ignored.
+      this.minActiveDuration = 0;
+      this.maxActiveDuration = Infinity;
+    } else {
+      if (this.repeatDuration < this.minActiveDuration) {
+        this.repeatDuration = this.minActiveDuration;
+      } else if (this.repeatDuration > this.maxActiveDuration) {
+        this.repeatDuration = this.maxActiveDuration;
+      }
+    }
   },
 
   createEffectOptions: function() {
@@ -702,14 +745,15 @@ AnimationRecord.prototype = {
   },
   addInstanceTime: function(instanceTime, isBegin) {
     if (!isFinite(instanceTime)) {
-      return;
+      return undefined;
     }
     var queue = isBegin ? this.beginInstanceTimes : this.endInstanceTimes;
-    queue.insert({ scheduleTime: instanceTime });
+    var result = { scheduleTime: instanceTime };
+    queue.insert(result);
     this.updateMainSchedule();
+    return result;
   },
   processNow: function() {
-
     if (this.scheduleTime > document.timeline.currentTime) {
       throw new Error('Scheduled too early');
     }
@@ -723,6 +767,11 @@ AnimationRecord.prototype = {
       }
       // this element is no longer in the main schedule
       this.scheduleTime = Infinity;
+
+      if (this.currentIntervalEnd) {
+        this.endInstanceTimes.remove(this.currentIntervalEnd);
+        this.currentIntervalEnd = null;
+      }
 
       // Start time is finite if we are currently playing
       if (this.startTime !== Infinity) {
@@ -741,14 +790,25 @@ AnimationRecord.prototype = {
       // else target does not exist or is not SVG
 
       this.dispatchEvent('begin', 0);
+
+      // Sets this.currentIntervalEnd
+      this.computeCurrentInterval();
     } else {
 
-      var scheduleTime = this.endInstanceTimes.extractFirst().scheduleTime;
+      var extractedEndTime = this.endInstanceTimes.extractFirst();
+      var scheduleTime = extractedEndTime.scheduleTime;
       if (this.scheduleTime !== scheduleTime) {
         throw new Error('Inconsistent schedule');
       }
       // this element is no longer in the main schedule
       this.scheduleTime = Infinity;
+
+      if (this.currentIntervalEnd) {
+        if (this.currentIntervalEnd !== extractedEndTime) {
+          this.endInstanceTimes.remove(this.currentIntervalEnd);
+        }
+        this.currentIntervalEnd = null;
+      }
 
       if (this.startTime !== Infinity && this.player) {
         if (this.fill === 'freeze') {
@@ -766,6 +826,26 @@ AnimationRecord.prototype = {
 
     this.updateMainSchedule();
   },
+
+  computeCurrentInterval: function() {
+
+    // Allows for duration and repeat count and min and max
+    var repeatDuration = this.repeatDuration;
+    if (!isFinite(repeatDuration)) {
+      return;
+    }
+    var endTime = this.startTime + repeatDuration;
+
+    var earliestScheduleTime = Math.min(
+        this.beginInstanceTimes.earliestScheduleTime(),
+        this.endInstanceTimes.earliestScheduleTime());
+
+    if (endTime < earliestScheduleTime) {
+      this.currentIntervalEnd = this.addInstanceTime(endTime, false);
+      // Note that events or DOM calls may lead to the interval ending early.
+    }
+  },
+
   dispatchEvent: function(eventType, detailArg) {
     // detailArg is the repeat count for repeat events
 
