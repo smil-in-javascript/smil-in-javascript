@@ -255,6 +255,9 @@ function parseBeginEndValue(value) {
     return Infinity;
   } else {
     var plusIndex = value.indexOf('+');
+    // FIXME: \- should be ignored when delimiting,
+    // and treated as - in id or symbol
+    // http://www.w3.org/TR/SMIL3/smil-timing.html#q21
     var minusIndex = value.indexOf('-');
     var offsetIndex;
     if (plusIndex === -1) {
@@ -273,6 +276,9 @@ function parseBeginEndValue(value) {
       token = value.substring(0, offsetIndex).trim();
       offset = parseOffsetValue(value.substring(offsetIndex));
     }
+    // FIXME: \. should be ignored when delimiting,
+    // and treated as . in id or symbol
+    // http://www.w3.org/TR/SMIL3/smil-timing.html#q21
     var separatorIndex = token.indexOf('.');
     if (separatorIndex === -1) {
       if (token.indexOf('accessKey(') === 0 &&
@@ -286,17 +292,22 @@ function parseBeginEndValue(value) {
         return undefined;
       }
     }
-    var timeSymbol = token.substring(separatorIndex + 1);
-    if (timeSymbol !== 'begin' && timeSymbol !== 'end') {
+    var suffix = token.substring(separatorIndex + 1);
+    if (suffix !== 'begin' && suffix !== 'end' && suffix !== 'click') {
+      // FIXME: support other event values
       return undefined;
     }
     var id = value.substring(0, separatorIndex);
     result = {};
     result.id = id;
-    result.timeSymbol = timeSymbol;
+    if (suffix === 'begin' || suffix === 'end') {
+      //FIXME: Support Syncbase dependency
+      result.timeSymbol = suffix;
+    } else {
+      result.eventKind = suffix;
+    }
     result.offset = offset;
-    //FIXME: Support Syncbase dependency
-    return undefined;
+    return result;
   }
 }
 
@@ -644,18 +655,30 @@ AnimationRecord.prototype = {
         spec.owner = this;
         spec.isBegin = isBegin;
 
-        // FIXME: support more spec types than only accessKey
-
-        if (!accessKeyTimeValueSpecs) {
-          // We were not yet listening for keypress
-          accessKeyTimeValueSpecs = {};
-          document.documentElement.addEventListener('keypress', processKeystroke);
+        if (spec.accessKey) {
+          if (!accessKeyTimeValueSpecs) {
+            // We were not yet listening for keypress
+            accessKeyTimeValueSpecs = {};
+            document.documentElement.addEventListener('keypress',
+                processKeystroke);
+          }
+          if (!accessKeyTimeValueSpecs[spec.accessKey]) {
+            // We were not yet listening for spec.accessKey
+            accessKeyTimeValueSpecs[spec.accessKey] = [];
+          }
+          accessKeyTimeValueSpecs[spec.accessKey].push(spec);
+        } else if (spec.eventKind === 'click') {
+          var clickTarget = document.getElementById(spec.id);
+          if (!clickTarget) {
+            // FIXME: register listener when target is created
+            return;
+          }
+          clickTarget.addEventListener('click', function() {
+            var currentTime = document.timeline.currentTime;
+            spec.owner.addInstanceTime(currentTime + spec.offset, spec.isBegin);
+          });
         }
-        if (!accessKeyTimeValueSpecs[spec.accessKey]) {
-          // We were not yet listening for spec.accessKey
-          accessKeyTimeValueSpecs[spec.accessKey] = [];
-        }
-        accessKeyTimeValueSpecs[spec.accessKey].push(spec);
+        // FIXME: support more spec types than only accessKey, click
       }
     }
   },
