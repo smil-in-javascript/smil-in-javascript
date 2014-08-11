@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <script src="../../web-animations.js"></script>
+    <script src="../../smil-in-javascript.js"></script>
+    <script src="../harness.js"></script>
+    <script src="line-properties-check.js"></script>
+
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="250" height="250">
+  <line id="polyfillLine" x1="10" y1="80" x2="90" y2="20" stroke-width="5" stroke="green" opacity="0.5">
+    <animate attributeName="x1" from="10" to="70" dur="10s"/>
+    <animate attributeName="y1" from="80" to="60" dur="10s"/>
+    <animate attributeName="x2" from="90" to="30" dur="10s"/>
+    <animate attributeName="y2" from="20" to="40" dur="10s"/>
+  </line>
+
+  <line id="nativeLine" x1="10" y1="80" x2="90" y2="20" stroke-width="5" stroke="red" opacity="0.5">
+    <nativeAnimate attributeName="x1" from="10" to="70" dur="10s"/>
+    <nativeAnimate attributeName="y1" from="80" to="60" dur="10s"/>
+    <nativeAnimate attributeName="x2" from="90" to="30" dur="10s"/>
+    <nativeAnimate attributeName="y2" from="20" to="40" dur="10s"/>
+  </line>
+</svg>
+
+  </body>
+</html>
