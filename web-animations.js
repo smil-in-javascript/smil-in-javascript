@@ -4444,6 +4444,7 @@ var propertyTypes = {
   left: percentLengthAutoType,
   letterSpacing: typeWithKeywords(['normal'], lengthType),
   lightingColor: colorType,
+  limitingConeAngle: numberType,
   lineHeight: percentLengthType, // TODO: Should support numberType as well.
   marginBottom: lengthAutoType,
   marginLeft: lengthAutoType,
@@ -4471,6 +4472,9 @@ var propertyTypes = {
   paddingTop: lengthType,
   perspective: typeWithKeywords(['none'], lengthType),
   perspectiveOrigin: originType,
+  pointsAtX: numberType,
+  pointsAtY: numberType,
+  pointsAtZ: numberType,
   r: lengthType,
   right: percentLengthAutoType,
   stopColor: colorType,
@@ -4502,7 +4506,12 @@ var propertyTypes = {
   ], percentLengthType),
   wordSpacing: typeWithKeywords(['normal'], percentLengthType),
   x: lengthType,
+  x1: lengthType,
+  x2: lengthType,
   y: lengthType,
+  y1: lengthType,
+  y2: lengthType,
+  z: lengthType,
   zIndex: typeWithKeywords(['auto'], integerType)
 };
 
@@ -4515,13 +4524,22 @@ var svgProperties = {
   'floodColor': 1,
   'height': 1,
   'lightingColor': 1,
+  'limitingConeAngle': 1,
+  'pointsAtX': 1,
+  'pointsAtY': 1,
+  'pointsAtZ': 1,
   'r': 1,
   'stopColor': 1,
   'stroke': 1,
   'transform': 1,
   'width': 1,
   'x': 1,
-  'y': 1
+  'x1': 1,
+  'x2': 1,
+  'y': 1,
+  'y1': 1,
+  'y2': 1,
+  'z': 1
 };
 
 var borderWidthAliases = {
