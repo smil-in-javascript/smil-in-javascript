@@ -3,6 +3,8 @@
 timing_test(function() {
   var polyfillSpotLight = document.getElementById('polyfillSpotLight');
   var nativeSpotLight = document.getElementById('nativeSpotLight');
+  var polyfillDistantLight = document.getElementById('polyfillDistantLight');
+  var nativeDistantLight = document.getElementById('nativeDistantLight');
 
   at(1000, 'z', 400, polyfillSpotLight, nativeSpotLight);
   at(2000, 'z', 300, polyfillSpotLight, nativeSpotLight);
@@ -22,5 +24,11 @@ timing_test(function() {
 
   at(13000, 'limitingConeAngle', 14, polyfillSpotLight, nativeSpotLight);
   at(14000, 'limitingConeAngle', 16, polyfillSpotLight, nativeSpotLight);
+
+  at(16000, 'elevation', 80, polyfillDistantLight, nativeDistantLight);
+  at(17000, 'elevation', 70, polyfillDistantLight, nativeDistantLight);
+  at(18000, 'elevation', 60, polyfillDistantLight, nativeDistantLight);
+  at(19000, 'azimuth', 45, polyfillDistantLight, nativeDistantLight);
+  at(20000, 'azimuth', 90, polyfillDistantLight, nativeDistantLight);
 
 }, 'animate feSpotLight properties');
