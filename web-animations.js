@@ -4410,6 +4410,7 @@ var transformType = {
 };
 
 var propertyTypes = {
+  azimuth: numberType,
   backgroundColor: colorType,
   backgroundPosition: positionListType,
   borderBottomColor: colorType,
@@ -4433,6 +4434,7 @@ var propertyTypes = {
   cy: lengthType,
   dx: lengthType,
   dy: lengthType,
+  elevation: numberType,
   fill: colorType,
   floodColor: colorType,
 
@@ -4526,10 +4528,12 @@ var propertyTypes = {
 };
 
 var svgProperties = {
+  'azimuth': 1,
   'cx': 1,
   'cy': 1,
   'dx': 1,
   'dy': 1,
+  'elevation': 1,
   'fill': 1,
   'floodColor': 1,
   'height': 1,
