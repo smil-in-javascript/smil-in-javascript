@@ -673,6 +673,24 @@ AnimationRecord.prototype = {
       resolvedPath = this.path;
     }
 
+    // http://www.w3.org/TR/SVG/animate.html#AnimateMotionElement
+    // Regarding the definition of the motion path, the ‘mpath’ element
+    // overrides the ‘path’ attribute, which overrides ‘values’, which
+    // overrides ‘from’, ‘by’ and ‘to’.
+    if (!resolvedPath) {
+      // FIXME: When an mpath child is added, we should update the resolvedPath
+
+      if (this.values) {
+        var valueList = this.values.split(';');
+        resolvedPath = 'M ' + valueList.join(' L ');
+      } else {
+        // FIXME: support 'by' and optional 'from', 'to'
+        if (this.from && this.to) {
+          resolvedPath = 'M ' + this.from + ' L ' + this.to;
+        }
+      }
+    }
+
     if (verbose) {
       console.log('resolvedPath = ' + resolvedPath);
       console.log('options  = ' + JSON.stringify(this.options));
