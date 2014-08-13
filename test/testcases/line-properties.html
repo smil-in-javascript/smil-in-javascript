@@ -25,6 +25,7 @@
     <marker id="nativeTriangle" viewBox="0 0 12 12" orient="auto">
       <path d="M 1 2 L 13 4 L 5 6 z"/>
       <nativeAnimate attributeName="refX" from="12" to="6" dur="6s" fill="freeze"/>
+      <!-- Note that native animation of refY is ignored - Chrome bug? -->
       <nativeAnimate attributeName="refY" from="6" to="0" dur="6s" fill="freeze"/>
     </marker>
   </defs>
