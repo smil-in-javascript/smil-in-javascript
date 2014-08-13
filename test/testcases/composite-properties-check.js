@@ -1,7 +1,8 @@
 'use strict';
 
 timing_test(function() {
-  var polyfillDisplacementMap = document.getElementById('polyfillDisplacementMap');
+  var polyfillDisplacementMap =
+      document.getElementById('polyfillDisplacementMap');
   var nativeDisplacementMap = document.getElementById('nativeDisplacementMap');
   var polyfillComposite = document.getElementById('polyfillComposite');
   var nativeComposite = document.getElementById('nativeComposite');

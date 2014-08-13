@@ -578,7 +578,7 @@ AnimationRecord.prototype = {
       // ignored. If the simple duration is indefinite, any ‘keyTimes’
       // specification will be ignored.
       if (this.keyTimes && this.calcMode !== 'paced' &&
-          timingInput.duration !== Infinity) {
+          this.timingInput.duration !== Infinity) {
         keyTimeList = this.keyTimes.split(';');
 
         var previousKeyTime = 0;
