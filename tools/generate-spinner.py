@@ -18,14 +18,14 @@ def angle_path(angle):
     firstQuarters = 0
   return 'M%d %dL%d %dA%d %d 1 %d 1 %d 0z' % (OUTER_RADIUS, OUTER_RADIUS, x + 0.5, y + 0.5, OUTER_RADIUS, OUTER_RADIUS, firstQuarters, OUTER_RADIUS)
 
-def printSpinner(animateTag, fill):
+def printSpinner(id, animateTag, fill):
   path = ''
   for index in xrange(69):
     path += angle_path((index - 14) * 5) + ';'
 
   print '<svg width="%d" height="%d" xmlns="http://www.w3.org/2000/svg">' % (OUTER_DIAMETER, OUTER_DIAMETER)
   print '<circle cx="%d" cy="%d" r="%d" fill="black"/>' % (OUTER_RADIUS, OUTER_RADIUS, MIDDLE_RADIUS)
-  print '<path fill="red" d="%s">' % angle_path(-70)
+  print '<path id="%s" fill="red" d="%s">' % (id, angle_path(-70))
   print '<%s attributeType="XML" attributeName="d" dur="9s" fill="%s" values="%s"/>' % (animateTag, fill, path)
   print '</path>'
   print '<circle cx="%d" cy="%d" r="%d" fill="blue"/>' % (OUTER_RADIUS, OUTER_RADIUS, INNER_RADIUS)
@@ -37,12 +37,14 @@ print """
   <body>
     <script src="../../web-animations.js"></script>
     <script src="../../smil-in-javascript.js"></script>
+    <script src="../harness.js"></script>
+    <script src="spinner-check.js"></script>
 """
 
-printSpinner('animate', 'remove')
-printSpinner('animate', 'freeze')
-printSpinner('nativeAnimate', 'remove')
-printSpinner('nativeAnimate', 'freeze')
+printSpinner('polyfillLeft', 'animate', 'remove')
+printSpinner('polyfillRight', 'animate', 'freeze')
+printSpinner('nativeLeft', 'nativeAnimate', 'remove')
+printSpinner('nativeRight', 'nativeAnimate', 'freeze')
 
 print """
   </body>
