@@ -38,6 +38,7 @@ var observedAttributes = {
   fill: true,
   from: true,
   keyPoints: true,
+  keySplines: true,
   keyTimes: true,
   max: true,
   min: true,
@@ -572,7 +573,12 @@ AnimationRecord.prototype = {
       }
 
       var keyTimeList = undefined;
-      if (this.keyTimes) {
+      // http://www.w3.org/TR/SVG/animate.html#KeyTimesAttribute
+      // If the interpolation mode is 'paced', the ‘keyTimes’ attribute is
+      // ignored. If the simple duration is indefinite, any ‘keyTimes’
+      // specification will be ignored.
+      if (this.keyTimes && this.calcMode !== 'paced' &&
+          timingInput.duration !== Infinity) {
         keyTimeList = this.keyTimes.split(';');
 
         var previousKeyTime = 0;
@@ -641,6 +647,29 @@ AnimationRecord.prototype = {
       ];
       keyframes[0][attributeName] = this.to;
       keyframes[1][attributeName] = this.to;
+    }
+
+    // http://www.w3.org/TR/SVG/animate.html#KeySplinesAttribute
+    // This attribute is ignored unless the ‘calcMode’ is set to 'spline'.
+    if (this.keySplines && this.calcMode === 'spline' && keyframes) {
+      var keySplineList = this.keySplines.split(';');
+      if (keySplineList.length + 1 === keyframes.length) {
+        for (var splineIndex = 0;
+             splineIndex < keySplineList.length;
+             ++splineIndex) {
+          // SVG delimits values by whitespace and optionally a comma.
+          // Web Animations requires the comma.
+
+          // FIXME: check that the values are all in the range 0 to 1.
+          // The Web Animations spec requires x values must be in the range
+          // [0, 1], but (unlike SMIL) it does not mention an allowed range
+          // for y values.
+          var spline = keySplineList[splineIndex];
+          keyframes[splineIndex].easing = 'cubic-bezier(' +
+              spline.replace(/,/g, ' ').trim().replace(/\s+/g, ',') +
+              ')';
+        }
+      }
     }
 
     if (verbose) {
