@@ -602,6 +602,14 @@ AnimationRecord.prototype = {
 
       if (this.values) {
         var valueList = this.values.split(';');
+        if (valueList[valueList.length - 1].trim() === '') {
+          // The value list used by the LA Times spinner has a trailing ;
+
+          // FIXME: ignore any trailing ';' in other lists too
+
+          // Ignore the trailing ';'
+          valueList.pop();
+        }
 
         // http://www.w3.org/TR/SVG/animate.html#KeyTimesAttribute
         // For animations specified with a ‘values’ list, the ‘keyTimes’

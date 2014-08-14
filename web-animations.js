@@ -4409,6 +4409,161 @@ var transformType = {
   }
 };
 
+function interpolateFlag(prev, next, frac) {
+  var flag = (frac >= 0.5) ? next : prev;
+  return flag ? 1 : 0;
+}
+
+var pathType = {
+  add: function() { throw 'Addition not supported for path attribute' },
+  interpolate: function(from, to, f) {
+    // SVG's path interpolation is specified in
+    // http://www.w3.org/TR/SVG/paths.html#DAttribute
+
+    var fromSegList = from.path.pathSegList;
+    var toSegList = to.path.pathSegList;
+    var numItems = fromSegList.numberOfItems;
+    if (numItems !== toSegList.numberOfItems) {
+      // Inconsistent # items, so we cannot interpolate
+      return from;
+    }
+
+    var value = '';
+    for (var index = 0; index < numItems; ++index) {
+      var fromSegment = fromSegList.getItem(index);
+      var toSegment = toSegList.getItem(index);
+      if (fromSegment.pathSegType !== toSegment.pathSegType) {
+        // Inconsistent segment type, so we cannot interpolate
+        return from;
+      }
+
+      // pathSegType takes the values listed in
+      // http://www.w3.org/TR/SVG/paths.html#InterfaceSVGPathSeg
+      switch (fromSegment.pathSegType) {
+        case SVGPathSeg.PATHSEG_CLOSEPATH:
+          value += ' Z ';
+          break;
+        case SVGPathSeg.PATHSEG_MOVETO_ABS:
+          value += ' M ' + interp(fromSegment.x, toSegment.x, f) +
+              ' ' + interp(fromSegment.y, toSegment.y, f);
+          break;
+        case SVGPathSeg.PATHSEG_MOVETO_REL:
+          value += ' m ' + interp(fromSegment.x, toSegment.x, f) +
+              ' ' + interp(fromSegment.y, toSegment.y, f);
+          break;
+        case SVGPathSeg.PATHSEG_LINETO_ABS:
+          value += ' L ' + interp(fromSegment.x, toSegment.x, f) +
+              ' ' + interp(fromSegment.y, toSegment.y, f);
+          break;
+        case SVGPathSeg.PATHSEG_LINETO_REL:
+          value += ' l ' + interp(fromSegment.x, toSegment.x, f) +
+              ' ' + interp(fromSegment.y, toSegment.y, f);
+          break;
+        case SVGPathSeg.PATHSEG_CURVETO_CUBIC_ABS:
+          value += ' C ' + interp(fromSegment.x1, toSegment.x1, f) +
+              ' ' + interp(fromSegment.y1, toSegment.y1, f) +
+              ' ' + interp(fromSegment.x2, toSegment.x2, f) +
+              ' ' + interp(fromSegment.y2, toSegment.y2, f) +
+              ' ' + interp(fromSegment.x, toSegment.x, f) +
+              ' ' + interp(fromSegment.y, toSegment.y, f);
+          break;
+        case SVGPathSeg.PATHSEG_CURVETO_CUBIC_REL:
+          value += ' c ' + interp(fromSegment.x1, toSegment.x1, f) +
+              ' ' + interp(fromSegment.y1, toSegment.y1, f) +
+              ' ' + interp(fromSegment.x2, toSegment.x2, f) +
+              ' ' + interp(fromSegment.y2, toSegment.y2, f) +
+              ' ' + interp(fromSegment.x, toSegment.x, f) +
+              ' ' + interp(fromSegment.y, toSegment.y, f);
+          break;
+        case SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_ABS:
+          value += ' Q ' + interp(fromSegment.x1, toSegment.x1, f) +
+              ' ' + interp(fromSegment.y1, toSegment.y1, f) +
+              ' ' + interp(fromSegment.x, toSegment.x, f) +
+              ' ' + interp(fromSegment.y, toSegment.y, f);
+          break;
+        case SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_REL:
+          value += ' q ' + interp(fromSegment.x1, toSegment.x1, f) +
+              ' ' + interp(fromSegment.y1, toSegment.y1, f) +
+              ' ' + interp(fromSegment.x, toSegment.x, f) +
+              ' ' + interp(fromSegment.y, toSegment.y, f);
+          break;
+        case fromSegment.PATHSEG_ARC_ABS:
+          value += ' A ' + interp(fromSegment.r1, toSegment.r1, f) +
+              ' ' + interp(fromSegment.r2, toSegment.r2, f) +
+              ' ' + interp(fromSegment.angle, toSegment.angle, f) +
+              ' ' + interpolateFlag(fromSegment.largeArcFlag,
+                                    toSegment.largeArcFlag, f) +
+              ' ' + interpolateFlag(fromSegment.sweepFlag,
+                                    toSegment.sweepFlag, f) +
+              ' ' + interp(fromSegment.x, toSegment.x, f) +
+              ' ' + interp(fromSegment.y, toSegment.y, f);
+          break;
+        case fromSegment.PATHSEG_ARC_REL:
+          value += ' a ' + interp(fromSegment.r1, toSegment.r1, f) +
+              ' ' + interp(fromSegment.r2, toSegment.r2, f) +
+              ' ' + interp(fromSegment.angle, toSegment.angle, f) +
+              ' ' + interpolateFlag(fromSegment.largeArcFlag,
+                                    toSegment.largeArcFlag, f) +
+              ' ' + interpolateFlag(fromSegment.sweepFlag,
+                                    toSegment.sweepFlag, f) +
+              ' ' + interp(fromSegment.x, toSegment.x, f) +
+              ' ' + interp(fromSegment.y, toSegment.y, f);
+          break;
+        case SVGPathSeg.PATHSEG_LINETO_HORIZONTAL_ABS:
+          value += ' H ' + interp(fromSegment.x, toSegment.x, f);
+          break;
+        case SVGPathSeg.PATHSEG_LINETO_HORIZONTAL_REL:
+          value += ' h ' + interp(fromSegment.x, toSegment.x, f);
+          break;
+        case SVGPathSeg.PATHSEG_LINETO_VERTICAL_ABS:
+          value += ' V ' + interp(fromSegment.y, toSegment.y, f);
+          break;
+        case SVGPathSeg.PATHSEG_LINETO_VERTICAL_REL:
+          value += ' v ' + interp(fromSegment.y, toSegment.y, f);
+          break;
+        case SVGPathSeg.PATHSEG_CURVETO_CUBIC_SMOOTH_ABS:
+          value += ' S ' + interp(fromSegment.x2, toSegment.x2, f) +
+              ' ' + interp(fromSegment.y2, toSegment.y2, f) +
+              ' ' + interp(fromSegment.x, toSegment.x, f) +
+              ' ' + interp(fromSegment.y, toSegment.y, f);
+          break;
+        case SVGPathSeg.PATHSEG_CURVETO_CUBIC_SMOOTH_REL:
+          value += ' s ' + interp(fromSegment.x2, toSegment.x2, f) +
+              ' ' + interp(fromSegment.y2, toSegment.y2, f) +
+              ' ' + interp(fromSegment.x, toSegment.x, f) +
+              ' ' + interp(fromSegment.y, toSegment.y, f);
+          break;
+        case SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_SMOOTH_ABS:
+          value += ' T ' + interp(fromSegment.x, toSegment.x, f) +
+              ' ' + interp(fromSegment.y, toSegment.y, f);
+          break;
+        case SVGPathSeg.PATHSEG_CURVETO_QUADRATIC_SMOOTH_REL:
+          value += ' t ' + interp(fromSegment.x, toSegment.x, f) +
+              ' ' + interp(fromSegment.y, toSegment.y, f);
+          break;
+        default:
+          // Unknown segment type, so we cannot interpolate
+          return from;
+      }
+    }
+
+    var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', value.trim());
+    return {path: path};
+  },
+  toCssValue: function(value, svgMode) {
+    ASSERT_ENABLED && assert(svgMode,
+        'Path type should only be used with SVG \'d\' attribute');
+    return value.path.getAttribute('d');
+  },
+  fromCssValue: function(value) {
+    var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    if (value)
+      path.setAttribute('d', value);
+    return {path: path};
+  }
+};
+
 var propertyTypes = {
   azimuth: numberType,
   backgroundColor: colorType,
@@ -4432,6 +4587,7 @@ var propertyTypes = {
   color: colorType,
   cx: lengthType,
   cy: lengthType,
+  d: pathType,
   dx: lengthType,
   dy: lengthType,
   elevation: numberType,
@@ -4531,6 +4687,7 @@ var svgProperties = {
   'azimuth': 1,
   'cx': 1,
   'cy': 1,
+  'd': 1,
   'dx': 1,
   'dy': 1,
   'elevation': 1,
