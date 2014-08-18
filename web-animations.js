@@ -2955,6 +2955,44 @@ var positionListType = {
   }
 };
 
+var percentLengthListType = {
+  zero: function() { return [percentLengthType.zero()]; },
+  add: function(base, delta) {
+    var out = [];
+    var maxLength = Math.max(base.length, delta.length);
+    for (var i = 0; i < maxLength; i++) {
+      var basePosition = base[i] ? base[i] : percentLengthType.zero();
+      var deltaPosition = delta[i] ? delta[i] : percentLengthType.zero();
+      out.push(percentLengthType.add(basePosition, deltaPosition));
+    }
+    return out;
+  },
+  interpolate: function(from, to, f) {
+    var out = [];
+    var maxLength = Math.max(from.length, to.length);
+    for (var i = 0; i < maxLength; i++) {
+      var fromValue = from[i] ? from[i] : percentLengthType.zero();
+      var toValue = to[i] ? to[i] : percentLengthType.zero();
+      out.push(percentLengthType.interpolate(fromValue, toValue, f));
+    }
+    return out;
+  },
+  toCssValue: function(value) {
+    return value.map(percentLengthType.toCssValue).join(', ');
+  },
+  fromCssValue: function(value) {
+    if (!isDefinedAndNotNull(value)) {
+      return undefined;
+    }
+    if (!value.trim()) {
+      return [percentLengthType.fromCssValue('0%')];
+    }
+    var values = value.split(/\s*,\s*|\s+/);
+    var out = values.map(percentLengthType.fromCssValue);
+    return out.every(isDefinedAndNotNull) ? out : undefined;
+  }
+};
+
 var rectangleRE = /rect\(([^,]+),([^,]+),([^,]+),([^)]+)\)/;
 var rectangleType = {
   add: function(base, delta) {
@@ -4653,6 +4691,7 @@ var propertyTypes = {
   'stop-color': colorType,
   'stop-opacity': numberType,
   stroke: colorType,
+  'stroke-dasharray': percentLengthListType,
   'stroke-dashoffset': percentLengthType,
   'stroke-opacity': numberType,
   'stroke-width': percentLengthType,
@@ -4724,6 +4763,7 @@ var svgProperties = {
   'stop-color': 1,
   'stop-opacity': 1,
   'stroke': 1,
+  'stroke-dasharray': 1,
   'stroke-dashoffset': 1,
   'stroke-opacity': 1,
   'stroke-width': 1,
