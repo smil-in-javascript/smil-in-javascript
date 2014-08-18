@@ -294,7 +294,8 @@ function parseBeginEndValue(value) {
       }
     }
     var suffix = token.substring(separatorIndex + 1);
-    if (suffix !== 'begin' && suffix !== 'end' && suffix !== 'click') {
+    if (suffix !== 'begin' && suffix !== 'end' &&
+        suffix !== 'click' && suffix !== 'mouseover') {
       // FIXME: support other event values
       return undefined;
     }
@@ -765,18 +766,18 @@ AnimationRecord.prototype = {
             accessKeyTimeValueSpecs[spec.accessKey] = [];
           }
           accessKeyTimeValueSpecs[spec.accessKey].push(spec);
-        } else if (spec.eventKind === 'click') {
-          var clickTarget = document.getElementById(spec.id);
-          if (!clickTarget) {
+        } else if (spec.eventKind === 'click' || spec.eventKind === 'mouseover') {
+          var mouseTarget = document.getElementById(spec.id);
+          if (!mouseTarget) {
             // FIXME: register listener when target is created
             return;
           }
-          clickTarget.addEventListener('click', function() {
+          mouseTarget.addEventListener(spec.eventKind, function() {
             var currentTime = document.timeline.currentTime;
             spec.owner.addInstanceTime(currentTime + spec.offset, spec.isBegin);
           });
         }
-        // FIXME: support more spec types than only accessKey, click
+        // FIXME: support more spec types than only accessKey, click, mouseover
       }
     }
   },
