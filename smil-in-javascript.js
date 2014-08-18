@@ -610,7 +610,16 @@ AnimationRecord.prototype = {
         }
 
         processValue = function(value) {
-            return transformType + '(' + value + ')';
+          // Web Animations requires scale and transform values to be comma
+          // separated.
+          // FIXME: Web Animations should also expect rotate to be comma
+          // separated
+          if (transformType === 'rotate') {
+            value = value.replace(/,/g, ' ');
+          } else {
+            value = value.trim().split(/\s*,\s*|\s+/).join(', ');
+          }
+          return transformType + '(' + value + ')';
         };
       }
 
