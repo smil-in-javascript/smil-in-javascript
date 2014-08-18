@@ -546,6 +546,13 @@ AnimationRecord.prototype = {
       return;
     }
 
+    if (attributeName === 'offset') {
+      // Web Animations uses keyframe offset for timing.
+      // When the SVG attribute 'offset' is animated, we use
+      // 'svgOffset' when communicating with Web Animations.
+      attributeName = 'svgOffset';
+    }
+
     var keyframes = null;
     if ((this.nodeName === 'animate' ||
          this.nodeName === 'animateTransform')) {

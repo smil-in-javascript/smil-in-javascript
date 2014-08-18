@@ -7,6 +7,7 @@ timing_test(function() {
   at(0, 'cx', 300, polyfillCircle, nativeCircle);
   at(1000, 'cy', 275, polyfillCircle, nativeCircle);
   at(2000, 'r', 150, polyfillCircle, nativeCircle);
+  at(2000, 'fill-opacity', [0.75, undefined], polyfillCircle, nativeCircle);
   at(3000, 'cx', 225, polyfillCircle, nativeCircle);
   at(3750, 'cy', 206.25, polyfillCircle, nativeCircle);
   at(3750, 'cx', 212.5, polyfillCircle, nativeCircle);

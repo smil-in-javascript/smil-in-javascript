@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <script src="../../web-animations.js"></script>
+    <script src="../../smil-in-javascript.js"></script>
+    <script src="../harness.js"></script>
+    <script src="stroke-properties-check.js"></script>
+
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="800" height="250">
+
+  <!-- FIXME: we should also support animation of stroke-dasharray -->
+  <line id="polyfillLine" x1="30" y1="30" x2="730" y2="30" stroke-dasharray="10, 15, 20, 25, 30, 35">
+    <animate attributeName="stroke" from="blue" to="green" dur="2s" fill="freeze"/>
+    <animate attributeName="stroke-width" from="10" to="20" dur="2s" fill="freeze"/>
+    <animate attributeName="stroke-opacity" from="1" to="0.2" dur="2s" fill="freeze"/>
+    <animate attributeName="stroke-dashoffset" from="0" to="100" dur="2s" fill="freeze"/>
+  </line>
+
+  <line id="nativeLine" x1="30" y1="80" x2="730" y2="80" stroke-dasharray="10, 15, 20, 25, 30, 35">
+    <nativeAnimate attributeName="stroke" from="blue" to="green" dur="2s" fill="freeze"/>
+    <nativeAnimate attributeName="stroke-width" from="10" to="20" dur="2s" fill="freeze"/>
+    <nativeAnimate attributeName="stroke-opacity" from="1" to="0.2" dur="2s" fill="freeze"/>
+    <nativeAnimate attributeName="stroke-dashoffset" from="0" to="100" dur="2s" fill="freeze"/>
+  </line>
+
+</svg>
+
+  </body>
+</html>
