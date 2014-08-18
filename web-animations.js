@@ -2302,11 +2302,11 @@ var KeyframeInternal = function(offset, composite, easing) {
 
 KeyframeInternal.prototype = {
   addPropertyValuePair: function(property, value) {
+    if (property === 'svgOffset') {
+      property = 'offset';
+    }
     ASSERT_ENABLED && assert(!this.cssValues.hasOwnProperty(property));
     this.cssValues[property] = value;
-  },
-  hasValueForProperty: function(property) {
-    return property in this.cssValues;
   }
 };
 
@@ -4624,6 +4624,7 @@ var propertyTypes = {
   minWidth: typeWithKeywords(
       ['max-content', 'min-content', 'fill-available', 'fit-content'],
       percentLengthType),
+  offset: percentLengthType,
   opacity: numberType,
   outlineColor: typeWithKeywords(['invert'], colorType),
   outlineOffset: lengthType,
@@ -4700,6 +4701,7 @@ var svgProperties = {
   'k4': 1,
   'lightingColor': 1,
   'limitingConeAngle': 1,
+  'offset': 1,
   'pointsAtX': 1,
   'pointsAtY': 1,
   'pointsAtZ': 1,
