@@ -56,6 +56,37 @@ var observedAttributes = {
   'xlink:href': true
 };
 
+// These events are specified in
+// http://www.w3.org/TR/SVG/interact.html#SVGEvents
+var elementEvents = {
+  focusin: true,
+  focusout: true,
+  activate: true,
+  click: true,
+  mousedown: true,
+  mouseup: true,
+  mouseover: true,
+  mousemove: true,
+  mouseout: true,
+  DOMSubtreeModified: true,
+  DOMNodeInserted: true,
+  DOMNodeRemoved: true,
+  DOMNodeRemovedFromDocument: true,
+  DOMNodeInsertedIntoDocument: true,
+  DOMAttrModified: true,
+  DOMCharacterDataModified: true,
+  SVGLoad: true,
+  SVGUnload: true,
+  SVGAbort: true,
+  SVGError: true,
+  SVGResize: true,
+  SVGScroll: true,
+  SVGZoom: true,
+  beginEvent: true,
+  endEvent: true,
+  repeatEvent: true
+};
+
 // Control debug logging.
 var verbose = false;
 
@@ -288,15 +319,18 @@ function parseBeginEndValue(value) {
           accessKey: token['accessKey('.length].charCodeAt(),
           offset: offset
         };
+      } else if (token in elementEvents) {
+        return {
+          eventKind: token,
+          offset: offset
+        };
       } else {
-        // FIXME: support other event values
         return undefined;
       }
     }
     var suffix = token.substring(separatorIndex + 1);
     if (suffix !== 'begin' && suffix !== 'end' &&
-        suffix !== 'click' && suffix !== 'mouseover') {
-      // FIXME: support other event values
+        !(suffix in elementEvents)) {
       return undefined;
     }
     var id = value.substring(0, separatorIndex);
@@ -773,18 +807,30 @@ AnimationRecord.prototype = {
             accessKeyTimeValueSpecs[spec.accessKey] = [];
           }
           accessKeyTimeValueSpecs[spec.accessKey].push(spec);
-        } else if (spec.eventKind === 'click' || spec.eventKind === 'mouseover') {
-          var mouseTarget = document.getElementById(spec.id);
-          if (!mouseTarget) {
-            // FIXME: register listener when target is created
+        } else if (spec.eventKind in elementEvents) {
+          var eventTarget;
+          if (spec.id) {
+            eventTarget = document.getElementById(spec.id);
+          } else {
+            eventTarget = this.target;
+          }
+          if (!eventTarget) {
+            // FIXME: register listener when eventTarget is created
             return;
           }
-          mouseTarget.addEventListener(spec.eventKind, function() {
+          var eventKind = spec.eventKind;
+          // strip trailing Event, if present
+          if (eventKind.indexOf('Event',
+              eventKind.length - 'Event'.length) !== -1) {
+            eventKind = eventKind.substring(0,
+                eventKind.length - 'Event'.length);
+          }
+          eventTarget.addEventListener(eventKind, function() {
             var currentTime = document.timeline.currentTime;
-            spec.owner.addInstanceTime(currentTime + spec.offset, spec.isBegin);
+            spec.owner.addInstanceTime(currentTime + spec.offset,
+                spec.isBegin);
           });
         }
-        // FIXME: support more spec types than only accessKey, click, mouseover
       }
     }
   },
