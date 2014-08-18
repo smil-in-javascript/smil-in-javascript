@@ -2302,11 +2302,11 @@ var KeyframeInternal = function(offset, composite, easing) {
 
 KeyframeInternal.prototype = {
   addPropertyValuePair: function(property, value) {
+    if (property === 'svgOffset') {
+      property = 'offset';
+    }
     ASSERT_ENABLED && assert(!this.cssValues.hasOwnProperty(property));
     this.cssValues[property] = value;
-  },
-  hasValueForProperty: function(property) {
-    return property in this.cssValues;
   }
 };
 
@@ -3487,6 +3487,9 @@ var colorType = typeWithKeywords(['currentColor'], {
             interp(from[2], to[2], f) / alpha, alpha];
   },
   toCssValue: function(value) {
+    if (value === undefined) {
+      return undefined;
+    }
     return 'rgba(' + Math.round(value[0]) + ', ' + Math.round(value[1]) +
         ', ' + Math.round(value[2]) + ', ' + value[3] + ')';
   },
@@ -4592,6 +4595,7 @@ var propertyTypes = {
   dy: lengthType,
   elevation: numberType,
   fill: colorType,
+  'fill-opacity': numberType,
   floodColor: colorType,
 
   // TODO: Handle these keywords properly.
@@ -4624,6 +4628,7 @@ var propertyTypes = {
   minWidth: typeWithKeywords(
       ['max-content', 'min-content', 'fill-available', 'fit-content'],
       percentLengthType),
+  offset: percentLengthType,
   opacity: numberType,
   outlineColor: typeWithKeywords(['invert'], colorType),
   outlineOffset: lengthType,
@@ -4645,8 +4650,12 @@ var propertyTypes = {
   right: percentLengthAutoType,
   scale: numberType,
   startOffset: lengthType,
-  stopColor: colorType,
+  'stop-color': colorType,
+  'stop-opacity': numberType,
   stroke: colorType,
+  'stroke-dashoffset': percentLengthType,
+  'stroke-opacity': numberType,
+  'stroke-width': percentLengthType,
   textIndent: typeWithKeywords(['each-line', 'hanging'], percentLengthType),
   textShadow: shadowType,
   top: percentLengthAutoType,
@@ -4692,6 +4701,7 @@ var svgProperties = {
   'dy': 1,
   'elevation': 1,
   'fill': 1,
+  'fill-opacity': 1,
   'floodColor': 1,
   'height': 1,
   'k1': 1,
@@ -4700,6 +4710,7 @@ var svgProperties = {
   'k4': 1,
   'lightingColor': 1,
   'limitingConeAngle': 1,
+  'offset': 1,
   'pointsAtX': 1,
   'pointsAtY': 1,
   'pointsAtZ': 1,
@@ -4710,8 +4721,12 @@ var svgProperties = {
   'ry': 1,
   'scale': 1,
   'startOffset': 1,
-  'stopColor': 1,
+  'stop-color': 1,
+  'stop-opacity': 1,
   'stroke': 1,
+  'stroke-dashoffset': 1,
+  'stroke-opacity': 1,
+  'stroke-width': 1,
   'transform': 1,
   'width': 1,
   'x': 1,
