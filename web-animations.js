@@ -2993,6 +2993,44 @@ var percentLengthListType = {
   }
 };
 
+var numberListType = {
+  zero: function() { return [numberType.zero()]; },
+  add: function(base, delta) {
+    var out = [];
+    var maxLength = Math.max(base.length, delta.length);
+    for (var i = 0; i < maxLength; i++) {
+      var basePosition = base[i] ? base[i] : numberType.zero();
+      var deltaPosition = delta[i] ? delta[i] : numberType.zero();
+      out.push(numberType.add(basePosition, deltaPosition));
+    }
+    return out;
+  },
+  interpolate: function(from, to, f) {
+    var out = [];
+    var maxLength = Math.max(from.length, to.length);
+    for (var i = 0; i < maxLength; i++) {
+      var fromValue = from[i] ? from[i] : numberType.zero();
+      var toValue = to[i] ? to[i] : numberType.zero();
+      out.push(numberType.interpolate(fromValue, toValue, f));
+    }
+    return out;
+  },
+  toCssValue: function(value) {
+    return value.map(numberType.toCssValue).join(', ');
+  },
+  fromCssValue: function(value) {
+    if (!isDefinedAndNotNull(value)) {
+      return undefined;
+    }
+    if (!value.trim()) {
+      return [numberType.fromCssValue('0%')];
+    }
+    var values = value.split(/\s*,\s*|\s+/);
+    var out = values.map(numberType.fromCssValue);
+    return out.every(isDefinedAndNotNull) ? out : undefined;
+  }
+};
+
 var rectangleRE = /rect\(([^,]+),([^,]+),([^,]+),([^)]+)\)/;
 var rectangleType = {
   add: function(base, delta) {
@@ -4629,8 +4667,8 @@ var propertyTypes = {
   cx: lengthType,
   cy: lengthType,
   d: pathType,
-  dx: lengthType,
-  dy: lengthType,
+  dx: percentLengthListType, // should be lengthListType
+  dy: percentLengthListType, // should be lengthListType
   elevation: numberType,
   fill: colorType,
   'fill-opacity': numberType,
@@ -4677,6 +4715,7 @@ var propertyTypes = {
   paddingTop: lengthType,
   perspective: typeWithKeywords(['none'], lengthType),
   perspectiveOrigin: originType,
+  points: numberListType,
   pointsAtX: numberType,
   pointsAtY: numberType,
   pointsAtZ: numberType,
@@ -4690,6 +4729,7 @@ var propertyTypes = {
   startOffset: lengthType,
   'stop-color': colorType,
   'stop-opacity': numberType,
+  stdDeviation: numberListType, // 1 or 2 numbers
   stroke: colorType,
   'stroke-dasharray': percentLengthListType,
   'stroke-dashoffset': percentLengthType,
@@ -4700,6 +4740,7 @@ var propertyTypes = {
   top: percentLengthAutoType,
   transform: transformType,
   transformOrigin: originType,
+  values: numberListType,
   verticalAlign: typeWithKeywords([
     'baseline',
     'sub',
@@ -4750,6 +4791,7 @@ var svgProperties = {
   'lightingColor': 1,
   'limitingConeAngle': 1,
   'offset': 1,
+  'points': 1,
   'pointsAtX': 1,
   'pointsAtY': 1,
   'pointsAtZ': 1,
@@ -4760,6 +4802,7 @@ var svgProperties = {
   'ry': 1,
   'scale': 1,
   'startOffset': 1,
+  'stdDeviation': 1,
   'stop-color': 1,
   'stop-opacity': 1,
   'stroke': 1,
@@ -4768,6 +4811,7 @@ var svgProperties = {
   'stroke-opacity': 1,
   'stroke-width': 1,
   'transform': 1,
+  'values': 1,
   'width': 1,
   'x': 1,
   'x1': 1,

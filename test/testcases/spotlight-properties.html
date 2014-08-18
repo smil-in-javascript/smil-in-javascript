@@ -19,7 +19,9 @@
       </feSpotLight>
     </feDiffuseLighting>
 
-    <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="polyfillBlur"/>
+    <feGaussianBlur id="polyfillGaussianBlur" in="SourceAlpha" result="polyfillBlur">
+      <animate attributeName="stdDeviation" from="5 7" to="8 10" dur="24s" fill="freeze"/>
+    </feGaussianBlur>
     <feSpecularLighting result="polyfillSpecular" in="polyfillBlur" specularConstant="1.5" specularExponent="7" lighting-color="#0178EF">
         <feDistantLight id="polyfillDistantLight" azimuth="0" elevation="90">
           <nativeAnimate attributeName="elevation" from="90" to="30" dur="6s" begin="15s"/>
@@ -45,7 +47,9 @@
       </feSpotLight>
     </feDiffuseLighting>
 
-    <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="nativeBlur"/>
+    <feGaussianBlur id="nativeGaussianBlur" in="SourceAlpha" result="nativeBlur">
+      <nativeAnimate attributeName="stdDeviation" from="5 7" to="8 10" dur="24s" fill="freeze"/>
+    </feGaussianBlur>
     <feSpecularLighting result="nativeSpecular" in="nativeBlur" specularConstant="1.5" specularExponent="7" lighting-color="#0178EF">
         <feDistantLight id="nativeDistantLight" azimuth="0" elevation="90">
           <nativeAnimate attributeName="elevation" from="90" to="30" dur="6s" begin="15s"/>
