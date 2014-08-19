@@ -415,6 +415,7 @@ var AnimationRecord = function(element) {
     this.target = element.parentNode;
   }
 
+  this.createEventListeners();
   this.createTimingInput();
   this.createEffectOptions();
 
@@ -434,7 +435,30 @@ var AnimationRecord = function(element) {
   }
 };
 
+function createEventListener(element, eventType, script) {
+  if (!script) {
+    return;
+  }
+
+  try {
+    var action = new Function(script);
+    element.addEventListener(eventType, action);
+  } catch (ex) {
+    if (verbose) {
+      console.log('on' + eventType + ': ' + ex);
+    }
+  }
+}
+
 AnimationRecord.prototype = {
+  createEventListeners: function() {
+    // The onbegin, onend and onrepeat attributes are specified at
+    // http://www.w3.org/TR/SVG/script.html#AnimationEvents
+
+    createEventListener(this.element, 'begin', this.onbegin);
+    createEventListener(this.element, 'end', this.onend);
+    createEventListener(this.element, 'repeat', this.onrepeat);
+  },
   createTimingInput: function() {
     var timingInput = {};
 
