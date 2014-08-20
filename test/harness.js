@@ -68,6 +68,10 @@ function timing_test_impl(callback, desc) {
       element = document.getElementById(element);
     }
 
+    if (!element) {
+      throw new Error('No such element');
+    }
+
     var attribute;
     switch (propertyName) {
       case 'targetElement':
