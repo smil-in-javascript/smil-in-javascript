@@ -208,6 +208,10 @@ function timing_test_impl(callback, desc) {
       }
       if (expectation.eventType) {
         // we wait for an event instead of a RAF
+        if (verbose) {
+          console.log('Waiting for ' + expectation.eventType + ' event on ' +
+              expectation.polyfillAnimationElement.id);
+        }
         return;
       }
       if (expectation.observeMutations) {
@@ -225,6 +229,10 @@ function timing_test_impl(callback, desc) {
 
   function registerEventListener(polyfillAnimationElement, eventType) {
     polyfillAnimationElement.addEventListener(eventType, function(e) {
+      if (verbose) {
+        console.log('Received ' + eventType + ' event on ' +
+            polyfillAnimationElement.id);
+      }
       verifyEventExpectation(eventType, e);
     });
   }
