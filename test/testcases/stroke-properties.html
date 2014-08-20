@@ -9,7 +9,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="800" height="500">
 
   <polyline id="polyfillLine" points="30,30 730,30 730,130 30,130" fill="none">
-    <animate attributeName="stroke" from="blue" to="green" dur="2s" fill="freeze"/>
+    <animate attributeName="color" from="red" to="yellow" dur="2s" fill="freeze"/>
+    <animate attributeName="stroke" values="currentColor; none; green; blue; currentColor" dur="2s" fill="freeze"/>
     <animate attributeName="stroke-width" from="10" to="20" dur="2s" fill="freeze"/>
     <animate attributeName="stroke-opacity" from="1" to="0.2" dur="2s" fill="freeze"/>
     <animate attributeName="stroke-dashoffset" from="0" to="100" dur="2s" fill="freeze"/>
@@ -18,7 +19,8 @@
   </polyline>
 
   <polyline id="nativeLine" points="30,30 730,30 730,130 30,130" fill="none" transform="translate(0, 200)">
-    <nativeAnimate attributeName="stroke" from="blue" to="green" dur="2s" fill="freeze"/>
+    <nativeAnimate attributeName="color" from="red" to="yellow" dur="2s" fill="freeze"/>
+    <nativeAnimate attributeName="stroke" values="currentColor; none; green; blue; currentColor" dur="2s" fill="freeze"/>
     <nativeAnimate attributeName="stroke-width" from="10" to="20" dur="2s" fill="freeze"/>
     <nativeAnimate attributeName="stroke-opacity" from="1" to="0.2" dur="2s" fill="freeze"/>
     <nativeAnimate attributeName="stroke-dashoffset" from="0" to="100" dur="2s" fill="freeze"/>

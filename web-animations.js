@@ -3535,7 +3535,9 @@ var namedColors = {
   yellowgreen: [154, 205, 50, 1]
 };
 
-var colorType = typeWithKeywords(['currentColor'], {
+// SVG fill and stroke accept none and currentColor
+// http://www.w3.org/TR/SVG/painting.html#SpecifyingPaint
+var colorType = typeWithKeywords(['currentColor', 'none'], {
   zero: function() { return [0, 0, 0, 0]; },
   _premultiply: function(value) {
     var alpha = value[3];
