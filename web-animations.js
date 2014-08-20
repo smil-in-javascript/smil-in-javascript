@@ -2994,13 +2994,13 @@ var percentLengthListType = {
 };
 
 var numberListType = {
-  zero: function() { return [numberType.zero()]; },
+  zero: function() { return [0]; },
   add: function(base, delta) {
     var out = [];
     var maxLength = Math.max(base.length, delta.length);
     for (var i = 0; i < maxLength; i++) {
-      var basePosition = base[i] ? base[i] : numberType.zero();
-      var deltaPosition = delta[i] ? delta[i] : numberType.zero();
+      var basePosition = base[i] ? base[i] : 0;
+      var deltaPosition = delta[i] ? delta[i] : 0;
       out.push(numberType.add(basePosition, deltaPosition));
     }
     return out;
@@ -3009,8 +3009,8 @@ var numberListType = {
     var out = [];
     var maxLength = Math.max(from.length, to.length);
     for (var i = 0; i < maxLength; i++) {
-      var fromValue = from[i] ? from[i] : numberType.zero();
-      var toValue = to[i] ? to[i] : numberType.zero();
+      var fromValue = from[i] ? from[i] : 0;
+      var toValue = to[i] ? to[i] : 0;
       out.push(numberType.interpolate(fromValue, toValue, f));
     }
     return out;
@@ -4672,7 +4672,8 @@ var propertyTypes = {
   elevation: numberType,
   fill: colorType,
   'fill-opacity': numberType,
-  floodColor: colorType,
+  'flood-color': colorType,
+  'flood-opacity': numberType,
 
   // TODO: Handle these keywords properly.
   fontSize: typeWithKeywords(['smaller', 'larger'], percentLengthType),
@@ -4685,7 +4686,7 @@ var propertyTypes = {
   k4: numberType,
   left: percentLengthAutoType,
   letterSpacing: typeWithKeywords(['normal'], lengthType),
-  lightingColor: colorType,
+  'lighting-color': colorType,
   limitingConeAngle: numberType,
   lineHeight: percentLengthType, // TODO: Should support numberType as well.
   marginBottom: lengthAutoType,
@@ -4722,6 +4723,7 @@ var propertyTypes = {
   r: lengthType,
   refX: lengthType,
   refY: lengthType,
+  rotate: numberListType,
   rx: lengthType,
   ry: lengthType,
   right: percentLengthAutoType,
@@ -4762,10 +4764,10 @@ var propertyTypes = {
     'fit-content'
   ], percentLengthType),
   wordSpacing: typeWithKeywords(['normal'], percentLengthType),
-  x: lengthType,
+  x: percentLengthListType,
   x1: lengthType,
   x2: lengthType,
-  y: lengthType,
+  y: percentLengthListType,
   y1: lengthType,
   y2: lengthType,
   z: lengthType,
@@ -4774,6 +4776,7 @@ var propertyTypes = {
 
 var svgProperties = {
   'azimuth': 1,
+  'color': 1,
   'cx': 1,
   'cy': 1,
   'd': 1,
@@ -4782,13 +4785,14 @@ var svgProperties = {
   'elevation': 1,
   'fill': 1,
   'fill-opacity': 1,
-  'floodColor': 1,
+  'flood-color': 1,
+  'flood-opacity': 1,
   'height': 1,
   'k1': 1,
   'k2': 1,
   'k3': 1,
   'k4': 1,
-  'lightingColor': 1,
+  'lighting-color': 1,
   'limitingConeAngle': 1,
   'offset': 1,
   'points': 1,
@@ -4798,6 +4802,7 @@ var svgProperties = {
   'r': 1,
   'refX': 1,
   'refY': 1,
+  'rotate': 1,
   'rx': 1,
   'ry': 1,
   'scale': 1,
