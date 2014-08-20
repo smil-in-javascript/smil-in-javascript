@@ -90,11 +90,15 @@ var elementEvents = {
 // Control debug logging.
 var verbose = false;
 
-// indexed by animationRecordId
+// indexed by animationRecordId and by element id
 var animationRecords = {};
 
 // Animations waiting for their target element to be created
 var waitingAnimationRecords = {};
+
+// Dependent time values waiting for their timebase element or its
+// AnimationRecord to be created
+var waitingDependentTimeValues = {};
 
 // map from accessKey to TimeValueSpecification list
 // null if there are not yet any elements waiting for an accessKey
@@ -337,7 +341,6 @@ function parseBeginEndValue(value) {
     result = {};
     result.id = id;
     if (suffix === 'begin' || suffix === 'end') {
-      //FIXME: Support Syncbase dependency
       result.timeSymbol = suffix;
     } else {
       result.eventKind = suffix;
@@ -383,6 +386,8 @@ var AnimationRecord = function(element) {
   this.scheduleTime = Infinity;
   this.beginInstanceTimes = new PriorityQueue();
   this.endInstanceTimes = new PriorityQueue();
+
+  this.dependents = [];
 
   var attributes = element.attributes;
   for (var index = 0; index < attributes.length; ++index) {
@@ -459,6 +464,12 @@ AnimationRecord.prototype = {
     createEventListener(this.element, 'end', this.onend);
     createEventListener(this.element, 'repeat', this.onrepeat);
   },
+
+  addDependent: function(dependentTimeValue) {
+    this.dependents.push(dependentTimeValue);
+    dependentTimeValue.timebase = this;
+  },
+
   createTimingInput: function() {
     var timingInput = {};
 
@@ -863,6 +874,18 @@ AnimationRecord.prototype = {
             spec.owner.addInstanceTime(currentTime + spec.offset,
                 spec.isBegin);
           });
+        } else if (spec.timeSymbol) {
+          var timebase = animationRecords[spec.id];
+          if (timebase) {
+            timebase.addDependent(spec);
+          } else {
+            var waitingDependents = waitingDependentTimeValues[spec.id];
+            if (!waitingDependents) {
+              waitingDependents = [];
+              waitingDependentTimeValues[spec.id] = waitingDependents;
+            }
+            waitingDependents.push(spec);
+          }
         }
       }
     }
@@ -921,7 +944,7 @@ AnimationRecord.prototype = {
           this.player.cancel();
         }
 
-        this.dispatchEvent('end', 0);
+        this.dispatchEvent('end', 0, scheduleTime);
       }
 
       this.startTime = scheduleTime; // used if target is created later
@@ -931,7 +954,7 @@ AnimationRecord.prototype = {
       }
       // else target does not exist or is not SVG
 
-      this.dispatchEvent('begin', 0);
+      this.dispatchEvent('begin', 0, scheduleTime);
 
       // Sets this.currentIntervalEnd
       this.computeCurrentInterval();
@@ -961,7 +984,7 @@ AnimationRecord.prototype = {
           this.player = null;
         }
 
-        this.dispatchEvent('end', 0);
+        this.dispatchEvent('end', 0, scheduleTime);
       }
       this.startTime = Infinity; // not playing
     }
@@ -988,8 +1011,18 @@ AnimationRecord.prototype = {
     }
   },
 
-  dispatchEvent: function(eventType, detailArg) {
+  dispatchEvent: function(eventType, detailArg, scheduleTime) {
     // detailArg is the repeat count for repeat events
+
+    // FIXME: We should update dependents earlier, when begin/end times for
+    // current interval are first known.
+    for (var index = 0; index < this.dependents.length; ++index) {
+      var dependent = this.dependents[index];
+      if (eventType === dependent.timeSymbol) {
+        dependent.owner.addInstanceTime(
+            scheduleTime + dependent.offset, dependent.isBegin);
+      }
+    }
 
     var timeEvent = new Event(eventType);
     timeEvent.view = document.defaultView;
@@ -1012,6 +1045,20 @@ function walkSVG(node) {
     // on the element won't be visible to user JavaScript.
     node.animationRecordId = animationRecord.animationRecordId;
     animationRecords[animationRecord.animationRecordId] = animationRecord;
+    if (node.id) {
+      // For sync-based dependencies, we look up animation records by id
+      animationRecords[node.id] = animationRecord;
+    }
+
+    var waitingDependents = waitingDependentTimeValues[node.id];
+    if (waitingDependents) {
+      for (var waitingIndex = 0;
+           waitingIndex < waitingDependents.length;
+           ++waitingIndex) {
+        animationRecord.addDependent(waitingDependents[waitingIndex]);
+      }
+      delete waitingDependentTimeValues[node.id];
+    }
   }
   var child = node.firstChild;
   while (child) {
