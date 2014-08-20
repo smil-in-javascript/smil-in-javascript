@@ -21,5 +21,9 @@ timing_test(function() {
   at(3500, 'width', 0, polyfillRect, nativeRect);
   at(3750, 'width', 50, polyfillRect, nativeRect);
   at(4000, 'width', 100, polyfillRect, nativeRect);
+  // Checking visually, the elements' visibility toggles.
+  at(4000, 'display', undefined, polyfillRect, nativeRect);
   at(4250, 'width', 100, polyfillRect, nativeRect);
+  at(5000, 'display', undefined, polyfillRect, nativeRect);
+  at(6000, 'display', undefined, polyfillRect, nativeRect);
 }, 'value list interpolation');
