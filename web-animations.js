@@ -4669,6 +4669,25 @@ var propertyTypes = {
   cx: lengthType,
   cy: lengthType,
   d: pathType,
+  display: typeWithKeywords([
+    'inline',
+    'block',
+    'list-item',
+    'run-in',
+    'compact',
+    'marker',
+    'table',
+    'inline-table',
+    'table-row-group',
+    'table-header-group',
+    'table-footer-group',
+    'table-row',
+    'table-column-group',
+    'table-column',
+    'table-cell',
+    'table-caption',
+    'none'
+  ], nonNumericType),
   dx: percentLengthListType, // should be lengthListType
   dy: percentLengthListType, // should be lengthListType
   elevation: numberType,
