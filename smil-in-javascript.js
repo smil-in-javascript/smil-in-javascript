@@ -862,13 +862,8 @@ AnimationRecord.prototype = {
             // FIXME: register listener when eventTarget is created
             return;
           }
-          var eventKind = spec.eventKind;
           // strip trailing Event, if present
-          if (eventKind.indexOf('Event',
-              eventKind.length - 'Event'.length) !== -1) {
-            eventKind = eventKind.substring(0,
-                eventKind.length - 'Event'.length);
-          }
+          var eventKind = spec.eventKind.replace(/Event$/, '');
           eventTarget.addEventListener(eventKind, function() {
             var currentTime = document.timeline.currentTime;
             spec.owner.addInstanceTime(currentTime + spec.offset,
