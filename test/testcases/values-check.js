@@ -5,6 +5,7 @@ timing_test(function() {
   var nativeRect = document.getElementById('nativeRect');
 
   at(0, 'width', 100, polyfillRect, nativeRect);
+  at(0, 'height', 50, polyfillRect, nativeRect);
   at(250, 'width', 50, polyfillRect, nativeRect);
   at(500, 'width', 0, polyfillRect, nativeRect);
   at(750, 'width', 25, polyfillRect, nativeRect);
@@ -19,8 +20,10 @@ timing_test(function() {
   at(3000, 'width', 50, polyfillRect, nativeRect);
   at(3250, 'width', 25, polyfillRect, nativeRect);
   at(3500, 'width', 0, polyfillRect, nativeRect);
+  at(3500, 'height', 50, polyfillRect, nativeRect);
   at(3750, 'width', 50, polyfillRect, nativeRect);
   at(4000, 'width', 100, polyfillRect, nativeRect);
+  at(4000, 'height', 100, polyfillRect, nativeRect);
   // Checking visually, the elements' visibility toggles.
   at(4000, 'display', undefined, polyfillRect, nativeRect);
   at(4250, 'width', 100, polyfillRect, nativeRect);
