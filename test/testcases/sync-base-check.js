@@ -12,6 +12,7 @@ timing_test(function() {
   var fifthPolyfillRect = document.getElementById('fifthPolyfillRect');
   var fifthNativeRect = document.getElementById('fifthNativeRect');
 
+  at(0, 'width', 100, firstPolyfillRect, firstNativeRect);
   at(1000, 'width', 200, firstPolyfillRect, firstNativeRect);
   at(2000, 'width', 100, firstPolyfillRect, firstNativeRect);
   at(3000, 'width', 200, secondPolyfillRect, secondNativeRect);
