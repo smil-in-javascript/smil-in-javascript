@@ -3745,9 +3745,8 @@ function buildSingleValueMatcher(name, hasUnits, baseValue) {
   return buildMatcher(name, 1, 0, true, hasUnits, baseValue);
 }
 
-function buildRotationMatcher(name, numValues, numOptionalValues,
-    commaDelimited, baseValue) {
-  var m = buildMatcher(name, numValues, numOptionalValues, commaDelimited,
+function buildRotationMatcher(name, numValues, numOptionalValues, baseValue) {
+  var m = buildMatcher(name, numValues, numOptionalValues, true,
       true, baseValue);
 
   var f = function(x) {
@@ -3782,14 +3781,14 @@ function build3DRotationMatcher() {
 }
 
 var transformREs = [
-  buildRotationMatcher('rotate', 1, 2, false),
-  buildRotationMatcher('rotateX', 1, 0, true),
-  buildRotationMatcher('rotateY', 1, 0, true),
-  buildRotationMatcher('rotateZ', 1, 0, true),
+  buildRotationMatcher('rotate', 1, 2),
+  buildRotationMatcher('rotateX', 1, 0),
+  buildRotationMatcher('rotateY', 1, 0),
+  buildRotationMatcher('rotateZ', 1, 0),
   build3DRotationMatcher(),
-  buildRotationMatcher('skew', 1, 1, true, 0),
-  buildRotationMatcher('skewX', 1, 0, true),
-  buildRotationMatcher('skewY', 1, 0, true),
+  buildRotationMatcher('skew', 1, 1, 0),
+  buildRotationMatcher('skewX', 1, 0),
+  buildRotationMatcher('skewY', 1, 0),
   buildSingleValueMatcher('translateX', true, {px: 0}),
   buildSingleValueMatcher('translateY', true, {px: 0}),
   buildSingleValueMatcher('translateZ', true, {px: 0}),
