@@ -691,6 +691,11 @@ AnimationRecord.prototype = {
           valueList.pop();
         }
 
+        if (valueList.length === 1) {
+          // We hold the value constant.
+          valueList.push(valueList[0]);
+        }
+
         // http://www.w3.org/TR/SVG/animate.html#KeyTimesAttribute
         // For animations specified with a ‘values’ list, the ‘keyTimes’
         // attribute if specified must have exactly as many values as there
