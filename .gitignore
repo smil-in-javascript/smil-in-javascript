@@ -8,3 +8,4 @@ tools/python/bin/*
 smil-in-javascript-4lint.js
 svg-animations.js
 test/testcases.js
+.chromium

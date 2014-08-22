@@ -14,5 +14,5 @@ unit-test:
 layout-test:
 	touch test/testcases.js
 	-test/update-testcases.py
-	${CHROME_BIN} --user-data-dir=. test/test-runner.html
+	${CHROME_BIN} --user-data-dir=.chromium test/test-runner.html
 
