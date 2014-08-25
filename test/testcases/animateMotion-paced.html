@@ -12,8 +12,19 @@
       path="m 0 0 h 30 v 40 h 66" fill="freeze"/>
   </rect>
 
+  <!-- calcMode defaults to paced -->
+  <rect id="polyfillRectRight" x="130" y="100" width="20" height="20" fill="green" opacity="0.5">
+    <animateMotion dur="136s"
+      path="m 0 0 h 30 v 40 h 66" fill="freeze"/>
+  </rect>
+
   <rect id="nativeRect" x="100" y="100" width="20" height="20" fill="red" opacity="0.5">
     <nativeAnimateMotion calcMode="paced" dur="136s"
+      path="m 0 0 h 30 v 40 h 66" fill="freeze"/>
+  </rect>
+
+  <rect id="nativeRectRight" x="130" y="100" width="20" height="20" fill="red" opacity="0.5">
+    <nativeAnimateMotion dur="136s"
       path="m 0 0 h 30 v 40 h 66" fill="freeze"/>
   </rect>
 </svg>
