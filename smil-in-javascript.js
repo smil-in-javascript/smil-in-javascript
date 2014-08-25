@@ -813,6 +813,10 @@ AnimationRecord.prototype = {
       }
     }
 
+    if (!this.calcMode) {
+      this.timingInput.easing = 'paced';
+    }
+
     if (verbose) {
       console.log('resolvedPath = ' + resolvedPath);
       console.log('options  = ' + JSON.stringify(this.options));
