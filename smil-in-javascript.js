@@ -713,7 +713,7 @@ AnimationRecord.prototype = {
           }
           keyframes.push(keyframe);
         }
-      } else if (this.from && this.to) {
+      } else {
 
         // http://www.w3.org/TR/SVG/animate.html#KeyTimesAttribute
         // For from/to/by animations, the ‘keyTimes’ attribute if specified
@@ -730,8 +730,16 @@ AnimationRecord.prototype = {
           ];
         }
 
-        keyframes[0][attributeName] = processValue(this.from);
-        keyframes[1][attributeName] = processValue(this.to);
+        if (this.from && this.to) {
+          keyframes[0][attributeName] = processValue(this.from);
+          keyframes[1][attributeName] = processValue(this.to);
+        } else if (this.to && !this.by) {
+          keyframes[1][attributeName] = processValue(this.to);
+        } else {
+          // FIXME: Support from-by animation and by animation
+          // http://www.w3.org/TR/2001/REC-smil-animation-20010904/#ByAttribute
+          keyframes = null;
+        }
       }
     } else if (this.nodeName === 'set' && this.to) {
       keyframes = [
