@@ -1,5 +1,12 @@
 'use strict';
 
+function matchNonEscapedIndexOf(str, searchValue, expectedIndex) {
+  assertEqual(
+      window._SmilInJavascriptTestingUtilities._nonEscapedIndexOf(
+          str, searchValue),
+      expectedIndex);
+}
+
 function matchClockValue(valueStr, expectedValue) {
   assertEqual(
       window._SmilInJavascriptTestingUtilities._parseClockValue(valueStr),
@@ -30,6 +37,20 @@ function matchBeginEnd(isBegin, valueStr, expectedValues) {
 }
 
 describe('parse', function() {
+  describe('nonEscapedIndexOf', function() {
+    it('should return -1 when searchValue is not found', function() {
+      matchNonEscapedIndexOf('foo.begin', '-', -1);
+    });
+    it('should return -1 when searchValue is always escaped', function() {
+      matchNonEscapedIndexOf('f\\-o\\-o.begin', '-', -1);
+    });
+    it('should return index when searchValue is found', function() {
+      matchNonEscapedIndexOf('f-o-o.begin', '-', 1);
+      matchNonEscapedIndexOf('f\\-o-o.begin', '-', 4);
+      matchNonEscapedIndexOf('f-o\\-o.begin', '-', 1);
+    });
+  });
+
   describe('parseClockValue', function() {
     it('should match the supplied clock value', function() {
       matchClockValue('2h', 2 * 60 * 60 * 1000);
