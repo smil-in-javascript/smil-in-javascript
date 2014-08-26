@@ -343,8 +343,8 @@ function parseBeginEndValue(value) {
     }
     // http://www.w3.org/TR/SMIL2/smil-timing.html#Timing-SyncbaseValueSyntax
     // http://www.w3.org/TR/SMIL2/smil-timing.html#Timing-EventValueSyntax
-    // No embedded white space is allowed between a syncbase element and a time-symbol.
-    // No embedded white space is allowed between an eventbase element and an event-symbol.
+    // No white space allowed between a syncbase element and a time-symbol.
+    // No white space allowed between an eventbase element and an event-symbol.
     var id = value.substring(0, separatorIndex).replace(/\\/g, '');
     var suffix = token.substring(separatorIndex + 1);
     if (suffix !== 'begin' && suffix !== 'end' &&
@@ -521,6 +521,19 @@ AnimationRecord.prototype = {
 
     // http://www.w3.org/TR/smil/smil-timing.html#adef-fill
     // http://www.w3.org/TR/smil/smil-timing.html#adef-fillDefault
+    if (!this.fill || this.fill === 'default') {
+      var ancestor = this.element;
+      var fillDefault = ancestor.getAttribute('filldefault');
+      // Fall back to the inherited fillDefault if necessary
+      while ((!fillDefault || fillDefault === 'inherit') &&
+          ancestor.parentNode &&
+          ancestor.parentNode.getAttribute) {
+        ancestor = ancestor.parentNode;
+        fillDefault = ancestor.getAttribute('filldefault');
+      }
+
+      this.fill = fillDefault;
+    }
     if (this.fill === 'freeze' ||
         this.fill === 'hold' ||
         this.fill === 'transition' ||
@@ -530,9 +543,6 @@ AnimationRecord.prototype = {
          !this.repeatCount &&
          !this.repeatDir)) {
       timingInput.fill = 'forwards';
-
-      // FIXME: support this.fill === 'fillDefault',
-      // where we must inspect the inherited fillDefault attribute.
     }
 
     if (this.calcMode === 'paced') {
