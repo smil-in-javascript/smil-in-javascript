@@ -272,6 +272,15 @@ function parseOffsetValue(value) {
   var result;
 }
 
+function nonEscapedIndexOf(str, searchValue) {
+  var start = 0;
+  var index = str.indexOf(searchValue, start);
+  while (index > 0 && str[index - 1] === '\\') {
+    index = str.indexOf(searchValue, index + 1);
+  }
+  return index;
+}
+
 // Used by parseBeginEnd to implement
 // http://www.w3.org/TR/SMIL3/smil-timing.html#Timing-BeginValueListSyntax
 // Returns a TimeValueSpecification, or undefined
@@ -291,10 +300,10 @@ function parseBeginEndValue(value) {
     return Infinity;
   } else {
     var plusIndex = value.indexOf('+');
-    // FIXME: \- should be ignored when delimiting,
+    // \- is ignored when delimiting,
     // and treated as - in id or symbol
     // http://www.w3.org/TR/SMIL3/smil-timing.html#q21
-    var minusIndex = value.indexOf('-');
+    var minusIndex = nonEscapedIndexOf(value, '-');
     var offsetIndex;
     if (plusIndex === -1) {
       offsetIndex = minusIndex;
@@ -312,10 +321,10 @@ function parseBeginEndValue(value) {
       token = value.substring(0, offsetIndex).trim();
       offset = parseOffsetValue(value.substring(offsetIndex));
     }
-    // FIXME: \. should be ignored when delimiting,
+    // \. is ignored when delimiting,
     // and treated as . in id or symbol
     // http://www.w3.org/TR/SMIL3/smil-timing.html#q21
-    var separatorIndex = token.indexOf('.');
+    var separatorIndex = nonEscapedIndexOf(token, '.');
     if (separatorIndex === -1) {
       if (token.indexOf('accessKey(') === 0 &&
           token[token.length - 1] === ')') {
@@ -332,12 +341,16 @@ function parseBeginEndValue(value) {
         return undefined;
       }
     }
+    // http://www.w3.org/TR/SMIL2/smil-timing.html#Timing-SyncbaseValueSyntax
+    // http://www.w3.org/TR/SMIL2/smil-timing.html#Timing-EventValueSyntax
+    // No embedded white space is allowed between a syncbase element and a time-symbol.
+    // No embedded white space is allowed between an eventbase element and an event-symbol.
+    var id = value.substring(0, separatorIndex).replace(/\\/g, '');
     var suffix = token.substring(separatorIndex + 1);
     if (suffix !== 'begin' && suffix !== 'end' &&
         !(suffix in elementEvents)) {
       return undefined;
     }
-    var id = value.substring(0, separatorIndex);
     result = {};
     result.id = id;
     if (suffix === 'begin' || suffix === 'end') {
@@ -1261,6 +1274,7 @@ if (window['SVGPolyfillAnimationElement']) {
 }
 
 window._SmilInJavascriptTestingUtilities = {
+  _nonEscapedIndexOf: nonEscapedIndexOf,
   _parseClockValue: parseClockValue,
   _parseOffsetValue: parseOffsetValue,
   _parseBeginEndValue: parseBeginEndValue,
