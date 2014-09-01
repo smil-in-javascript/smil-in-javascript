@@ -848,6 +848,39 @@ AnimationRecord.prototype = {
       this.timingInput.easing = 'paced';
     }
 
+    // FIXME: support keyPoints
+    // http://www.w3.org/TR/SVG/animate.html#KeyPointsAttribute
+
+    // http://www.w3.org/TR/SVG/animate.html#KeyTimesAttribute
+    // If the interpolation mode is 'paced', the ‘keyTimes’ attribute is
+    // ignored. If the simple duration is indefinite, any ‘keyTimes’
+    // specification will be ignored.
+    var keyTimeList = undefined;
+    if (this.keyTimes && this.calcMode !== 'paced' &&
+        this.timingInput.duration !== Infinity) {
+      keyTimeList = this.keyTimes.split(';');
+
+      var previousKeyTime = 0;
+      var validKeyTime = true;
+      for (var keyTimeIndex = 0;
+           validKeyTime && keyTimeIndex < keyTimeList.length;
+           ++keyTimeIndex) {
+        var currentKeyTime = parseFloat(keyTimeList[keyTimeIndex]);
+        keyTimeList[keyTimeIndex] = currentKeyTime;
+        validKeyTime =
+            currentKeyTime >= previousKeyTime &&
+            (keyTimeIndex !== 0 || currentKeyTime === 0) &&
+            currentKeyTime <= 1;
+
+        previousKeyTime = currentKeyTime;
+      }
+      if (!validKeyTime) {
+        keyTimeList = undefined;
+      } else {
+        this.timingInput.easing = keyTimeList;
+      }
+    }
+
     if (verbose) {
       console.log('resolvedPath = ' + resolvedPath);
       console.log('options  = ' + JSON.stringify(this.options));

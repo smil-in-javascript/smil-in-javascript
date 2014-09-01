@@ -2377,6 +2377,19 @@ TimingFunction.createFromString = function(spec, timedItem) {
     }
     return presetTimingFunctions.linear;
   }
+
+  if (spec instanceof Array) {
+    if (timedItem instanceof Animation &&
+        timedItem.effect instanceof MotionPathEffect) {
+      if (spec.length >= 2 && spec[0] === 0 && spec[spec.length - 1] === 1) {
+        // FIXME: PacedTimingFunction needs a different name
+        var result = new PacedTimingFunction(timedItem.effect);
+        result.keyTimes = function() { return spec; };
+        return result;
+      }
+    }
+  }
+
   var stepMatch = /steps\(\s*(\d+)\s*,\s*(start|end|middle)\s*\)/.exec(spec);
   if (stepMatch) {
     return new StepTimingFunction(Number(stepMatch[1]), stepMatch[2]);
@@ -2473,6 +2486,9 @@ var PacedTimingFunction = function(pathEffect) {
 };
 
 PacedTimingFunction.prototype = createObject(TimingFunction.prototype, {
+  keyTimes: function() {
+    return this._pathEffect._cumulativeLengths;
+  },
   setRange: function(range) {
     ASSERT_ENABLED && assert(range.min >= 0 && range.min <= 1);
     ASSERT_ENABLED && assert(range.max >= 0 && range.max <= 1);
@@ -2480,7 +2496,7 @@ PacedTimingFunction.prototype = createObject(TimingFunction.prototype, {
     this._range = range;
   },
   scaleTime: function(fraction) {
-    var cumulativeLengths = this._pathEffect._cumulativeLengths;
+    var cumulativeLengths = this.keyTimes();
     var numSegments = cumulativeLengths.length - 1;
     if (!cumulativeLengths[numSegments] || fraction <= 0) {
       return this._range.min;
@@ -2488,8 +2504,8 @@ PacedTimingFunction.prototype = createObject(TimingFunction.prototype, {
     if (fraction >= 1) {
       return this._range.max;
     }
-    var minLength = this.lengthAtIndex(this._range.min * numSegments);
-    var maxLength = this.lengthAtIndex(this._range.max * numSegments);
+    var minLength = this.lengthAtIndex(cumulativeLengths, this._range.min * numSegments);
+    var maxLength = this.lengthAtIndex(cumulativeLengths, this._range.max * numSegments);
     var length = interp(minLength, maxLength, fraction);
     var leftIndex = this.findLeftIndex(cumulativeLengths, length);
     var leftLength = cumulativeLengths[leftIndex];
@@ -2512,13 +2528,16 @@ PacedTimingFunction.prototype = createObject(TimingFunction.prototype, {
     }
     return leftIndex;
   },
-  lengthAtIndex: function(i) {
+  lengthAtIndex: function(cumulativeLengths, i) {
     ASSERT_ENABLED &&
         console.assert(i >= 0 && i <= cumulativeLengths.length - 1);
     var leftIndex = Math.floor(i);
-    var startLength = this._pathEffect._cumulativeLengths[leftIndex];
-    var endLength = this._pathEffect._cumulativeLengths[leftIndex + 1];
     var indexFraction = i % 1;
+    var startLength = cumulativeLengths[leftIndex];
+    if (indexFraction === 0) {
+      return startLength;
+    }
+    var endLength = cumulativeLengths[leftIndex + 1];
     return interp(startLength, endLength, indexFraction);
   }
 });
