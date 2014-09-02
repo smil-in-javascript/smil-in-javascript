@@ -500,7 +500,16 @@ AnimationRecord.prototype = {
         timingInput.iterations = parseFloat(this.repeatCount);
       }
 
-      this.repeatDuration = timingInput.duration * timingInput.iterations;
+      if (timingInput.duration === 0 || timingInput.iterations === 0) {
+        // http://www.w3.org/TR/SMIL3/smil-timing.html#q79
+        // zero value * value = zero value
+        // zero value * indefinite = zero value
+        // e.g. 0 instead of NaN when {duration, iterations} = {0, Infinity}
+        this.repeatDuration = 0;
+        timingInput.duration = 0;
+      } else {
+        this.repeatDuration = timingInput.duration * timingInput.iterations;
+      }
     } else {
       this.repeatDuration = timingInput.duration;
     }
@@ -514,7 +523,9 @@ AnimationRecord.prototype = {
         this.repeatDuration = parseClockValue(this.repeatDur);
       }
 
-      if (timingInput.duration !== 0) {
+      if (timingInput.duration === 0) {
+        timingInput.iterations = 0;
+      } else {
         timingInput.iterations = this.repeatDuration / timingInput.duration;
       }
     }
