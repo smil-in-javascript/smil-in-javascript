@@ -844,8 +844,63 @@ AnimationRecord.prototype = {
       }
     }
 
-    if (!this.calcMode) {
-      this.timingInput.easing = 'paced';
+    this.timingInput.easing = 'paced';
+    if (this.calcMode === 'linear') {
+      this.options.spacing = 'distribute';
+    }
+
+    // http://www.w3.org/TR/SVG/animate.html#KeyPointsAttribute
+    var keyPointList = undefined;
+    if (this.keyPoints) {
+      keyPointList = this.keyPoints.split(';').map(parseFloat);
+      var validKeyPoint = true;
+      for (var keyPointIndex = 0;
+           validKeyPoint && keyPointIndex < keyPointList.length;
+           ++keyPointIndex) {
+        var currentKeyPoint = keyPointList[keyPointIndex];
+        validKeyPoint =
+            currentKeyPoint >= 0 &&
+            currentKeyPoint <= 1;
+      }
+      if (!validKeyPoint) {
+        keyPointList = undefined;
+      }
+    }
+
+    // http://www.w3.org/TR/SVG/animate.html#KeyTimesAttribute
+    // If the interpolation mode is 'paced', the ‘keyTimes’ attribute is
+    // ignored. If the simple duration is indefinite, any ‘keyTimes’
+    // specification will be ignored.
+    var keyTimeList = undefined;
+    if (this.keyTimes && this.calcMode !== 'paced' &&
+        this.timingInput.duration !== Infinity) {
+      keyTimeList = this.keyTimes.split(';').map(parseFloat);
+
+      var previousKeyTime = 0;
+      var validKeyTime =
+          keyTimeList.length >= 2 &&
+          keyTimeList[0] === 0 &&
+          keyTimeList[keyTimeList.length - 1] === 1 &&
+          (!keyPointList || keyPointList.length === keyTimeList.length);
+      for (var keyTimeIndex = 0;
+           validKeyTime && keyTimeIndex < keyTimeList.length;
+           ++keyTimeIndex) {
+        var currentKeyTime = keyTimeList[keyTimeIndex];
+        validKeyTime =
+            currentKeyTime >= previousKeyTime &&
+            currentKeyTime <= 1;
+
+        previousKeyTime = currentKeyTime;
+      }
+      if (!validKeyTime) {
+        keyTimeList = undefined;
+      } else {
+        this.options.spacing = 'distribute';
+        this.options.keyTimes = keyTimeList;
+        if (keyPointList) {
+          this.options.keyPoints = keyPointList;
+        }
+      }
     }
 
     if (verbose) {
