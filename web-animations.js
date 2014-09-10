@@ -1687,6 +1687,9 @@ var clamp = function(x, min, max) {
 /** @constructor */
 var MotionPathEffect = function(path, autoRotate, angle, composite) {
   var iterationComposite = undefined;
+  var spacing = undefined;
+  var keyTimes = undefined;
+  var keyPoints = undefined;
   var options = autoRotate;
   if (typeof options == 'string' || options instanceof String ||
       angle || composite) {
@@ -1697,6 +1700,9 @@ var MotionPathEffect = function(path, autoRotate, angle, composite) {
     angle = options.angle;
     composite = options.composite;
     iterationComposite = options.iterationComposite;
+    spacing = options.spacing; /* distribute or paced */
+    keyTimes = options.keyTimes;
+    keyPoints = options.keyPoints;
   }
 
   enterModifyCurrentAnimationState();
@@ -1705,6 +1711,9 @@ var MotionPathEffect = function(path, autoRotate, angle, composite) {
 
     this.composite = composite;
     this.iterationComposite = iterationComposite;
+    this.spacing = spacing;
+    this.keyTimes = keyTimes;
+    this.keyPoints = keyPoints;
 
     // TODO: path argument is not in the spec -- seems useful since
     // SVGPathSegList doesn't have a constructor.
@@ -1751,7 +1760,6 @@ MotionPathEffect.prototype = createObject(AnimationEffect.prototype, {
     }
   },
   _sample: function(timeFraction, currentIteration, target) {
-    // TODO: Handle accumulation.
     var lengthAtTimeFraction = this._lengthAtTimeFraction(timeFraction);
     var point = this._path.getPointAtLength(lengthAtTimeFraction);
     var x = point.x - target.offsetWidth / 2;
@@ -1776,6 +1784,23 @@ MotionPathEffect.prototype = createObject(AnimationEffect.prototype, {
         new AddReplaceCompositableValue(value, this.composite));
   },
   _lengthAtTimeFraction: function(timeFraction) {
+    timeFraction = clamp(timeFraction, 0, 1);
+    if (this.spacing !== 'distribute' || !this._keyLengths) {
+      return this._totalLength * timeFraction;
+    }
+    if (this.keyTimes) {
+      var leftIndex = this._findLeftIndex(this.keyTimes, timeFraction);
+      var leftLength = this._keyLengths[leftIndex];
+      if (leftIndex === this.keyTimes.length - 1) {
+        return leftLength;
+      }
+      var ratio =
+          (timeFraction - this.keyTimes[leftIndex]) /
+          (this.keyTimes[leftIndex + 1] - this.keyTimes[leftIndex]);
+
+      var segmentLength = this._keyLengths[leftIndex + 1] - leftLength;
+      return leftLength + ratio * segmentLength;
+    }
     var segmentCount = this._cumulativeLengths.length - 1;
     if (!segmentCount) {
       return 0;
@@ -1784,6 +1809,19 @@ MotionPathEffect.prototype = createObject(AnimationEffect.prototype, {
     var index = clamp(Math.floor(scaledFraction), 0, segmentCount);
     return this._cumulativeLengths[index] + ((scaledFraction % 1) * (
         this._cumulativeLengths[index + 1] - this._cumulativeLengths[index]));
+  },
+  _findLeftIndex: function(array, value) {
+    var leftIndex = 0;
+    var rightIndex = array.length;
+    while (rightIndex - leftIndex > 1) {
+      var midIndex = (leftIndex + rightIndex) >> 1;
+      if (array[midIndex] <= value) {
+        leftIndex = midIndex;
+      } else {
+        rightIndex = midIndex;
+      }
+    }
+    return leftIndex;
   },
   _updateOffsetPerIteration: function() {
     if (this.iterationComposite === 'accumulate' &&
@@ -1843,6 +1881,20 @@ MotionPathEffect.prototype = createObject(AnimationEffect.prototype, {
         }
       }
       this._cumulativeLengths = cumulativeLengths;
+      this._totalLength = this._path.getTotalLength();
+      var keyLengths;
+      if (this.keyPoints) {
+        keyLengths = [];
+        for (var index = 0; index < this.keyPoints.length; ++index) {
+          keyLengths.push(this.keyPoints[index] * this._totalLength);
+        }
+      } else {
+        keyLengths = this._cumulativeLengths;
+      }
+      if (this.keyTimes && keyLengths.length !== this.keyTimes.length) {
+        keyLengths = undefined;
+      }
+      this._keyLengths = keyLengths;
       this._updateOffsetPerIteration();
     } finally {
       exitModifyCurrentAnimationState(repeatLastTick);
@@ -2371,10 +2423,6 @@ TimingFunction.createFromString = function(spec, timedItem) {
     return preset;
   }
   if (spec === 'paced') {
-    if (timedItem instanceof Animation &&
-        timedItem.effect instanceof MotionPathEffect) {
-      return new PacedTimingFunction(timedItem.effect);
-    }
     return presetTimingFunctions.linear;
   }
   var stepMatch = /steps\(\s*(\d+)\s*,\s*(start|end|middle)\s*\)/.exec(spec);
@@ -2460,68 +2508,6 @@ var presetTimingFunctions = {
   'step-middle': new StepTimingFunction(1, 'middle'),
   'step-end': new StepTimingFunction(1, 'end')
 };
-
-
-
-/** @constructor */
-var PacedTimingFunction = function(pathEffect) {
-  ASSERT_ENABLED && assert(pathEffect instanceof MotionPathEffect);
-  this._pathEffect = pathEffect;
-  // Range is the portion of the effect over which we pace, normalized to
-  // [0, 1].
-  this._range = {min: 0, max: 1};
-};
-
-PacedTimingFunction.prototype = createObject(TimingFunction.prototype, {
-  setRange: function(range) {
-    ASSERT_ENABLED && assert(range.min >= 0 && range.min <= 1);
-    ASSERT_ENABLED && assert(range.max >= 0 && range.max <= 1);
-    ASSERT_ENABLED && assert(range.min < range.max);
-    this._range = range;
-  },
-  scaleTime: function(fraction) {
-    var cumulativeLengths = this._pathEffect._cumulativeLengths;
-    var numSegments = cumulativeLengths.length - 1;
-    if (!cumulativeLengths[numSegments] || fraction <= 0) {
-      return this._range.min;
-    }
-    if (fraction >= 1) {
-      return this._range.max;
-    }
-    var minLength = this.lengthAtIndex(this._range.min * numSegments);
-    var maxLength = this.lengthAtIndex(this._range.max * numSegments);
-    var length = interp(minLength, maxLength, fraction);
-    var leftIndex = this.findLeftIndex(cumulativeLengths, length);
-    var leftLength = cumulativeLengths[leftIndex];
-    var segmentLength = cumulativeLengths[leftIndex + 1] - leftLength;
-    if (segmentLength > 0) {
-      return (leftIndex + (length - leftLength) / segmentLength) / numSegments;
-    }
-    return leftLength / cumulativeLengths.length;
-  },
-  findLeftIndex: function(array, value) {
-    var leftIndex = 0;
-    var rightIndex = array.length;
-    while (rightIndex - leftIndex > 1) {
-      var midIndex = (leftIndex + rightIndex) >> 1;
-      if (array[midIndex] <= value) {
-        leftIndex = midIndex;
-      } else {
-        rightIndex = midIndex;
-      }
-    }
-    return leftIndex;
-  },
-  lengthAtIndex: function(i) {
-    ASSERT_ENABLED &&
-        console.assert(i >= 0 && i <= cumulativeLengths.length - 1);
-    var leftIndex = Math.floor(i);
-    var startLength = this._pathEffect._cumulativeLengths[leftIndex];
-    var endLength = this._pathEffect._cumulativeLengths[leftIndex + 1];
-    var indexFraction = i % 1;
-    return interp(startLength, endLength, indexFraction);
-  }
-});
 
 var interp = function(from, to, f, type) {
   if (Array.isArray(from) || Array.isArray(to)) {
@@ -5796,7 +5782,6 @@ window._WebAnimationsTestingUtilities = {
   _hsl2rgb: hsl2rgb,
   _types: propertyTypes,
   _knownPlayers: PLAYERS,
-  _pacedTimingFunction: PacedTimingFunction,
   _prefixProperty: prefixProperty,
   _propertyIsSVGAttrib: propertyIsSVGAttrib
 };
