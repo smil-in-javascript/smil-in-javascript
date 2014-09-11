@@ -401,6 +401,7 @@ var AnimationRecord = function(element) {
   this.endInstanceTimes = new PriorityQueue();
 
   this.dependents = [];
+  this.activeState = 'inactive';
 
   var attributes = element.attributes;
   for (var index = 0; index < attributes.length; ++index) {
@@ -528,6 +529,22 @@ AnimationRecord.prototype = {
       } else {
         timingInput.iterations = this.repeatDuration / timingInput.duration;
       }
+    }
+
+    // http://www.w3.org/TR/smil/smil-timing.html#adef-restart
+    // http://www.w3.org/TR/smil/smil-timing.html#adef-restartDefault
+    if (!this.restart || this.restart === 'default') {
+      var ancestor = this.element;
+      var restartDefault = ancestor.getAttribute('restartdefault');
+      // Fall back to the inherited fillDefault if necessary
+      while ((!restartDefault || restartDefault === 'inherit') &&
+          ancestor.parentNode &&
+          ancestor.parentNode.getAttribute) {
+        ancestor = ancestor.parentNode;
+        restartDefault = ancestor.getAttribute('restartdefault');
+      }
+
+      this.restart = restartDefault;
     }
 
     // http://www.w3.org/TR/smil/smil-timing.html#adef-fill
@@ -1028,6 +1045,16 @@ AnimationRecord.prototype = {
       // this element is no longer in the main schedule
       this.scheduleTime = Infinity;
 
+      if ((this.activeState === 'active' && this.restart === 'whenNotActive') ||
+          (this.activeState !== 'inactive' && this.restart === 'never')) {
+        if (verbose) {
+          console.log('restart = ' + this.restart +
+              ', activeState = ' + this.activeState);
+        }
+        this.updateMainSchedule();
+        return;
+      }
+
       if (this.currentIntervalEnd) {
         this.endInstanceTimes.remove(this.currentIntervalEnd);
         this.currentIntervalEnd = null;
@@ -1039,6 +1066,7 @@ AnimationRecord.prototype = {
           this.player.cancel();
         }
 
+        this.activeState = 'frozen';
         this.dispatchEvent('end', 0, scheduleTime);
       }
 
@@ -1049,6 +1077,7 @@ AnimationRecord.prototype = {
       }
       // else target does not exist or is not SVG
 
+      this.activeState = 'active';
       this.dispatchEvent('begin', 0, scheduleTime);
 
       // Sets this.currentIntervalEnd
@@ -1079,6 +1108,7 @@ AnimationRecord.prototype = {
           this.player = null;
         }
 
+        this.activeState = 'frozen';
         this.dispatchEvent('end', 0, scheduleTime);
       }
       this.startTime = Infinity; // not playing
