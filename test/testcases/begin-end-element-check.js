@@ -22,19 +22,20 @@ timing_test(function() {
   var polyfillSecondRect = document.getElementById('polyfillSecondRect');
   var nativeSecondRect = document.getElementById('nativeSecondRect');
 
+  at(1000, 'width', 100, polyfillFirstRect, nativeFirstRect);
   executeAt(1000, beginElements);
   at(2000, 'transform', undefined, polyfillSecondRect, nativeSecondRect);
-  at(3000, 'transform', 'translate(-20, 120)',
+  at(3000, 'transform', ['translate(-20, 120)', 'translate(-20 120)'],
       polyfillFirstRect, nativeFirstRect);
-  at(5000, 'transform', 'translate(-40, 90)',
+  at(5000, 'transform', ['translate(-40, 90)', 'translate(-40 90)'],
       polyfillFirstRect, nativeFirstRect);
-  at(6000, 'transform', 'translate(10, -160)',
+  at(6000, 'transform', ['translate(10, -160)', 'translate(10 -160)'],
       polyfillSecondRect, nativeSecondRect);
   executeAt(8000, endElements);
-  at(9000, 'transform', 'translate(-20, 120)',
+  at(9000, 'transform', ['translate(-20, 120)', 'translate(-20 120)'],
       polyfillFirstRect, nativeFirstRect);
   at(10000, 'transform', '', polyfillSecondRect, nativeSecondRect);
   at(12000, 'transform', '', polyfillSecondRect, nativeSecondRect);
-  at(13000, 'transform', 'translate(-40, 90)',
+  at(13000, 'transform', ['translate(-40, 90)', 'translate(-40 90)'],
       polyfillFirstRect, nativeFirstRect);
 }, 'beginElement');
