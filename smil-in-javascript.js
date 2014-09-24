@@ -401,7 +401,7 @@ var AnimationRecord = function(element) {
   this.endInstanceTimes = new PriorityQueue();
 
   this.dependents = [];
-  this.activeState = 'inactive';
+  this.activeState = 'preActive'; // 'active' on begin, 'postActive' on end
 
   var attributes = element.attributes;
   for (var index = 0; index < attributes.length; ++index) {
@@ -536,7 +536,7 @@ AnimationRecord.prototype = {
     if (!this.restart || this.restart === 'default') {
       var ancestor = this.element;
       var restartDefault = ancestor.getAttribute('restartdefault');
-      // Fall back to the inherited fillDefault if necessary
+      // Fall back to the inherited restartDefault if necessary
       while ((!restartDefault || restartDefault === 'inherit') &&
           ancestor.parentNode &&
           ancestor.parentNode.getAttribute) {
@@ -1046,7 +1046,7 @@ AnimationRecord.prototype = {
       this.scheduleTime = Infinity;
 
       if ((this.activeState === 'active' && this.restart === 'whenNotActive') ||
-          (this.activeState !== 'inactive' && this.restart === 'never')) {
+          (this.activeState !== 'preActive' && this.restart === 'never')) {
         if (verbose) {
           console.log('restart = ' + this.restart +
               ', activeState = ' + this.activeState);
@@ -1060,13 +1060,12 @@ AnimationRecord.prototype = {
         this.currentIntervalEnd = null;
       }
 
-      // Start time is finite if we are currently playing
-      if (this.startTime !== Infinity) {
+      if (this.activeState === 'active') {
         if (this.player) {
           this.player.cancel();
         }
 
-        this.activeState = 'frozen';
+        this.activeState = 'postActive';
         this.dispatchEvent('end', 0, scheduleTime);
       }
 
@@ -1099,7 +1098,7 @@ AnimationRecord.prototype = {
         this.currentIntervalEnd = null;
       }
 
-      if (this.startTime !== Infinity && this.player) {
+      if (this.activeState === 'active' && this.player) {
         if (this.fill === 'freeze') {
           this.player.pause();
           this.player.currentTime = scheduleTime - this.player.startTime;
@@ -1108,7 +1107,7 @@ AnimationRecord.prototype = {
           this.player = null;
         }
 
-        this.activeState = 'frozen';
+        this.activeState = 'postActive';
         this.dispatchEvent('end', 0, scheduleTime);
       }
       this.startTime = Infinity; // not playing
