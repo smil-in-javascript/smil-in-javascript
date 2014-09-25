@@ -224,6 +224,60 @@ window.requestAnimationFrame(function pollSchedule() {
   window.requestAnimationFrame(pollSchedule);
 });
 
+/** @constructor */
+var InstanceTimeList = function() {
+  // Each entry in the list has a 'scheduleTime' property.
+
+  // We implement the instance time list using an array, sorted by scheduleTime.
+  // entry[0] has the earliest scheduleTime
+  this.entries = [];
+};
+
+InstanceTimeList.prototype = {
+  insert: function(newEntry) {
+    var index = this.binarySearch(newEntry.scheduleTime);
+    this.entries.splice(index, 0, newEntry);
+  },
+  remove: function(existingEntry) {
+    var index = this.binarySearch(existingEntry.scheduleTime);
+    while (this.entries[index] !== existingEntry) {
+      ++index;
+    }
+    this.entries.splice(index, 1);
+  },
+  binarySearch: function(scheduleTime) {
+    var first = 0;
+    var last = this.entries.length;
+    // We search [first,last)
+    while (first !== last) {
+      var middle = (first + last) >> 1;
+      if (this.entries[middle].scheduleTime < scheduleTime) {
+        first = middle + 1;
+      } else {
+        last = middle;
+      }
+    }
+    if (first < this.entries.length &&
+        this.entries[first].scheduleTime < scheduleTime) {
+      first = first + 1;
+    }
+    return first;
+  },
+  earliestScheduleTime: function() {
+    if (this.entries.length === 0) {
+      return Infinity;
+    }
+    return this.entries[0].scheduleTime;
+  },
+  // returns null if no entry has scheduleTime <= currentTime
+  extractFirst: function(currentTime) {
+    if (this.entries.length === 0 ||
+        currentTime < this.entries[0].scheduleTime) {
+      return null;
+    }
+    return this.entries.shift();
+  }
+};
 
 // Implements http://www.w3.org/TR/SVG/animate.html#ClockValueSyntax
 // Converts value to milliseconds.
@@ -397,8 +451,8 @@ var AnimationRecord = function(element) {
   ++animationRecordCounter;
 
   this.scheduleTime = Infinity;
-  this.beginInstanceTimes = new PriorityQueue();
-  this.endInstanceTimes = new PriorityQueue();
+  this.beginInstanceTimes = new InstanceTimeList();
+  this.endInstanceTimes = new InstanceTimeList();
 
   this.dependents = [];
   this.activeState = 'preActive'; // 'active' on begin, 'postActive' on end
@@ -1379,6 +1433,7 @@ if (window['SVGPolyfillAnimationElement']) {
 }
 
 window._SmilInJavascriptTestingUtilities = {
+  _instanceTimeList: InstanceTimeList,
   _nonEscapedIndexOf: nonEscapedIndexOf,
   _parseClockValue: parseClockValue,
   _parseOffsetValue: parseOffsetValue,
